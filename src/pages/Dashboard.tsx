@@ -141,9 +141,11 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isDarkMode, onClose, onAd
     endDate: '',
     type: 'news' as const,
     description: '',
+    requirements: '',
+    resources: '',
     applicationLink: '',
     xPostLink: '',
-    leaderboardLink: '',
+    winnerCriteria: '',
     notionLink: '',
   });
 
@@ -157,9 +159,11 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isDarkMode, onClose, onAd
       endDate: formData.endDate ? new Date(formData.endDate) : undefined,
       type: formData.type,
       description: formData.description,
+      requirements: formData.requirements || undefined,
+      resources: formData.resources || undefined,
       applicationLink: formData.applicationLink || undefined,
       xPostLink: formData.xPostLink || undefined,
-      leaderboardLink: formData.leaderboardLink || undefined,
+      winnerCriteria: formData.winnerCriteria || undefined,
       notionLink: formData.notionLink || undefined,
       tags: [],
       isFavorite: false,
@@ -171,7 +175,7 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isDarkMode, onClose, onAd
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className={`${isDarkMode ? 'bg-gray-700' : 'bg-white'} rounded-lg shadow-xl w-full max-w-2xl max-h-96 overflow-y-auto`}>
+      <div className={`${isDarkMode ? 'bg-gray-700' : 'bg-white'} rounded-lg shadow-xl w-full max-w-2xl max-h-screen overflow-y-auto`}>
         <div className="sticky top-0 flex justify-between items-center p-6 border-b" style={{ borderColor: isDarkMode ? '#4b5563' : '#e5e7eb' }}>
           <h2 className={`text-2xl font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Add New Event</h2>
           <button onClick={onClose} className={`text-2xl font-bold ${isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-400 hover:text-gray-600'}`}>×</button>
@@ -254,7 +258,29 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isDarkMode, onClose, onAd
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className={`w-full px-2 py-1 border rounded text-sm h-12 resize-none ${inputClass}`}
+              className={`w-full px-2 py-1 border rounded text-sm h-10 resize-none ${inputClass}`}
+            />
+          </div>
+
+          {/* Requirements */}
+          <div>
+            <label className={`text-xs font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} block mb-1`}>Requirements</label>
+            <textarea
+              value={formData.requirements}
+              onChange={(e) => setFormData({ ...formData, requirements: e.target.value })}
+              className={`w-full px-2 py-1 border rounded text-sm h-10 resize-none ${inputClass}`}
+              placeholder="e.g., Developer account, GitHub submission"
+            />
+          </div>
+
+          {/* Resources */}
+          <div>
+            <label className={`text-xs font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} block mb-1`}>Resources</label>
+            <textarea
+              value={formData.resources}
+              onChange={(e) => setFormData({ ...formData, resources: e.target.value })}
+              className={`w-full px-2 py-1 border rounded text-sm h-10 resize-none ${inputClass}`}
+              placeholder="e.g., Documentation, API docs, sample code"
             />
           </div>
 
@@ -281,13 +307,12 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ isDarkMode, onClose, onAd
               />
             </div>
             <div>
-              <label className={`text-xs font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} block mb-1`}>Leaderboard Link</label>
-              <input
-                type="url"
-                placeholder="https://..."
-                value={formData.leaderboardLink}
-                onChange={(e) => setFormData({ ...formData, leaderboardLink: e.target.value })}
-                className={`w-full px-2 py-1 border rounded text-sm ${inputClass}`}
+              <label className={`text-xs font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} block mb-1`}>Winner Criteria</label>
+              <textarea
+                placeholder="e.g., Code quality, innovation, completeness"
+                value={formData.winnerCriteria}
+                onChange={(e) => setFormData({ ...formData, winnerCriteria: e.target.value })}
+                className={`w-full px-2 py-1 border rounded text-sm h-10 resize-none ${inputClass}`}
               />
             </div>
             <div>

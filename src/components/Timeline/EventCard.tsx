@@ -32,7 +32,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, isActive, onClose, onEdit,
   if (isEditing) {
     return (
       <div className={`${cardBgClass} rounded-lg shadow-lg p-4 w-96 border-l-4 transition-all overflow-y-auto max-h-96 ${bgColorClass}`}>
-        <div className="flex justify-between items-start mb-3 sticky top-0">
+        <div className="flex justify-between items-start mb-3 sticky top-0 bg-inherit z-10">
           <h3 className={`font-bold text-sm ${cardTextClass}`}>Edit Event</h3>
           <button onClick={() => setIsEditing(false)} className={`text-lg leading-none ${closeButtonClass}`}>×</button>
         </div>
@@ -55,7 +55,29 @@ const EventCard: React.FC<EventCardProps> = ({ event, isActive, onClose, onEdit,
             <textarea
               value={editedEvent.description}
               onChange={(e) => setEditedEvent({ ...editedEvent, description: e.target.value })}
-              className={`w-full px-2 py-1 border rounded text-sm h-12 resize-none ${inputBgClass}`}
+              className={`w-full px-2 py-1 border rounded text-sm h-10 resize-none ${inputBgClass}`}
+            />
+          </div>
+
+          {/* Requirements */}
+          <div>
+            <label className={`text-xs font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} block mb-1`}>Requirements</label>
+            <textarea
+              value={editedEvent.requirements || ''}
+              onChange={(e) => setEditedEvent({ ...editedEvent, requirements: e.target.value || undefined })}
+              className={`w-full px-2 py-1 border rounded text-sm h-10 resize-none ${inputBgClass}`}
+              placeholder="e.g., Developer account, GitHub submission"
+            />
+          </div>
+
+          {/* Resources */}
+          <div>
+            <label className={`text-xs font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} block mb-1`}>Resources</label>
+            <textarea
+              value={editedEvent.resources || ''}
+              onChange={(e) => setEditedEvent({ ...editedEvent, resources: e.target.value || undefined })}
+              className={`w-full px-2 py-1 border rounded text-sm h-10 resize-none ${inputBgClass}`}
+              placeholder="e.g., Documentation, API docs, sample code"
             />
           </div>
 
@@ -105,15 +127,14 @@ const EventCard: React.FC<EventCardProps> = ({ event, isActive, onClose, onEdit,
             />
           </div>
 
-          {/* Leaderboard Link */}
+          {/* Winner Criteria */}
           <div>
-            <label className={`text-xs font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} block mb-1`}>Leaderboard Link</label>
-            <input
-              type="url"
-              placeholder="https://..."
-              value={editedEvent.leaderboardLink || ''}
-              onChange={(e) => setEditedEvent({ ...editedEvent, leaderboardLink: e.target.value || undefined })}
-              className={`w-full px-2 py-1 border rounded text-sm ${inputBgClass}`}
+            <label className={`text-xs font-semibold ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} block mb-1`}>Winner Criteria</label>
+            <textarea
+              value={editedEvent.winnerCriteria || ''}
+              onChange={(e) => setEditedEvent({ ...editedEvent, winnerCriteria: e.target.value || undefined })}
+              className={`w-full px-2 py-1 border rounded text-sm h-10 resize-none ${inputBgClass}`}
+              placeholder="e.g., Code quality, innovation, completeness"
             />
           </div>
 
@@ -211,7 +232,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, isActive, onClose, onEdit,
         </div>
 
         {/* Save/Cancel Buttons */}
-        <div className="flex gap-2 mt-4 sticky bottom-0">
+        <div className="flex gap-2 mt-4 sticky bottom-0 bg-inherit z-10">
           <button
             onClick={handleSave}
             className="flex-1 bg-green-500 text-white text-xs font-semibold py-2 rounded hover:bg-green-600 transition"
@@ -230,7 +251,7 @@ const EventCard: React.FC<EventCardProps> = ({ event, isActive, onClose, onEdit,
   }
 
   return (
-    <div className={`${cardBgClass} rounded-lg shadow-lg p-4 w-72 border-l-4 transition-all ${bgColorClass}`}>
+    <div className={`${cardBgClass} rounded-lg shadow-lg p-4 w-80 border-l-4 transition-all overflow-y-auto max-h-screen ${bgColorClass}`}>
       {/* Header */}
       <div className="flex justify-between items-start mb-2">
         <h3 className={`font-bold text-sm ${cardTextClass} flex-1`}>{event.title}</h3>
@@ -252,29 +273,56 @@ const EventCard: React.FC<EventCardProps> = ({ event, isActive, onClose, onEdit,
       </div>
 
       {/* Description */}
-      <p className={`text-sm ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-3 line-clamp-3`}>{event.description}</p>
+      <p className={`text-xs ${isDarkMode ? 'text-gray-300' : 'text-gray-700'} mb-2 line-clamp-2`}>{event.description}</p>
+
+      {/* Requirements */}
+      {event.requirements && (
+        <div className={`text-xs mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+          <span className="font-semibold">Requirements:</span>
+          <p className="ml-2">{event.requirements}</p>
+        </div>
+      )}
+
+      {/* Resources */}
+      {event.resources && (
+        <div className={`text-xs mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+          <span className="font-semibold">Resources:</span>
+          <p className="ml-2">{event.resources}</p>
+        </div>
+      )}
 
       {/* Rewards Summary */}
       {event.rewards && (
         <div className={`${isDarkMode ? 'bg-gray-600' : 'bg-gray-50'} rounded p-2 mb-3 text-xs space-y-1`}>
-          <p className={`font-semibold ${isDarkMode ? 'text-gray-100' : 'text-gray-800'}`}>
-            💰 {event.rewards.amount} {event.rewards.currency}
+          <p className={`font-semibold ${isDarkMode ? 'text-gray-100' : 'text-gray-800'} mb-1`}>
+            💰 Rewards
+          </p>
+          <p className={isDarkMode ? 'text-gray-300' : 'text-gray-700'}>
+            <span className="font-semibold">Amount:</span> {event.rewards.amount} {event.rewards.currency}
           </p>
           <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>
-            Status: <span className={
+            <span className="font-semibold">Status:</span> <span className={
               event.rewards.status === 'delivered' ? 'text-green-600 font-semibold' :
               event.rewards.status === 'delayed' ? 'text-red-600 font-semibold' :
               'text-yellow-600 font-semibold'
             }>{event.rewards.status}</span>
           </p>
           <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>
-            Expected: {formatDate(event.rewards.defaultDeliveryDate)}
+            <span className="font-semibold">Expected:</span> {formatDate(event.rewards.defaultDeliveryDate)}
           </p>
           {event.rewards.realizedDeliveryDate && (
             <p className={isDarkMode ? 'text-gray-400' : 'text-gray-600'}>
-              Delivered: {formatDate(event.rewards.realizedDeliveryDate)}
+              <span className="font-semibold">Delivered:</span> {formatDate(event.rewards.realizedDeliveryDate)}
             </p>
           )}
+        </div>
+      )}
+
+      {/* Winner Criteria */}
+      {event.winnerCriteria && (
+        <div className={`text-xs mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+          <span className="font-semibold">Winner Criteria:</span>
+          <p className="ml-2">{event.winnerCriteria}</p>
         </div>
       )}
 
@@ -300,17 +348,6 @@ const EventCard: React.FC<EventCardProps> = ({ event, isActive, onClose, onEdit,
             title="X Post"
           >
             Post
-          </a>
-        )}
-        {event.leaderboardLink && (
-          <a
-            href={event.leaderboardLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-center bg-purple-600 text-white text-xs font-semibold py-2 rounded hover:bg-purple-700 transition truncate"
-            title="Leaderboard"
-          >
-            Leaderboard
           </a>
         )}
         {event.notionLink && (

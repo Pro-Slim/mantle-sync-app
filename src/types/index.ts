@@ -6,9 +6,11 @@ export interface Event {
   endDate?: Date;
   type: 'bounty' | 'hackathon' | 'news' | 'campaign' | 'featured';
   description: string;
+  requirements?: string;
+  resources?: string;
   applicationLink?: string;
   xPostLink?: string;
-  leaderboardLink?: string;
+  winnerCriteria?: string;
   notionLink?: string;
   rewards?: {
     amount: string;
