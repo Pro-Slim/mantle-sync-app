@@ -1,0 +1,56 @@
+.App {
+  min-height: 100vh;
+  background-color: #f3f4f6;
+}
+
+/* Smooth transitions */
+* {
+  transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+/* SVG animations */
+circle {
+  transition: r 0.2s ease, fill 0.2s ease, opacity 0.2s ease;
+}
+
+line {
+  transition: stroke 0.2s ease, stroke-width 0.2s ease;
+}
+
+/* Card animations */
+.event-card {
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Glow effect for today marker */
+@keyframes glow {
+  0%, 100% {
+    filter: drop-shadow(0 0 4px rgba(255, 183, 3, 0.6));
+  }
+  50% {
+    filter: drop-shadow(0 0 8px rgba(255, 183, 3, 0.8));
+  }
+}
+
+.today-marker {
+  animation: glow 2s ease-in-out infinite;
+}
+
+/* Line clamping for descriptions */
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
