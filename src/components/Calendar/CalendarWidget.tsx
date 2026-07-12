@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
+import { CalendarReminder } from '../../types';
 
 interface CalendarWidgetProps {
   onDateSelect?: (date: Date) => void;
-  isDarkMode?: boolean;
+  reminders?: CalendarReminder[];
+  onDeleteReminder?: (reminderId: string) => void;
 }
 
-const CalendarWidget: React.FC<CalendarWidgetProps> = ({ onDateSelect, isDarkMode = false }) => {
+const CalendarWidget: React.FC<CalendarWidgetProps> = ({ onDateSelect, reminders = [], onDeleteReminder }) => {
   const [currentDate, setCurrentDate] = useState(new Date(2026, 6, 4)); // July 4, 2026
+  const [hoveredReminderDate, setHoveredReminderDate] = useState<string | null>(null);
 
   const getDaysInMonth = (date: Date) => {
     return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
@@ -29,6 +32,17 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ onDateSelect, isDarkMod
     onDateSelect?.(selectedDate);
   };
 
+  const getRemindersForDate = (day: number): CalendarReminder[] => {
+    return reminders.filter(r => {
+      const reminderDate = new Date(r.date);
+      return reminderDate.getFullYear() === currentDate.getFullYear() &&
+             reminderDate.getMonth() === currentDate.getMonth() &&
+             reminderDate.getDate() === day;
+    });
+  };
+
+  const dateKey = (day: number) => `${currentDate.getFullYear()}-${currentDate.getMonth()}-${day}`;
+
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'];
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -49,73 +63,98 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ onDateSelect, isDarkMod
                         today.getMonth() === currentDate.getMonth();
 
   return (
-    <div className={`${isDarkMode ? 'bg-gray-700' : 'bg-white'} rounded-lg shadow-lg p-4 w-72`}>
+    <div className="mantle-frosted rounded-xl p-3 w-full max-w-xs" style={{
+      border: '1px solid rgba(101, 179, 174, 0.3)',
+      boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3), 0 0 12px rgba(101, 179, 174, 0.15), inset 0 1px 1px rgba(101, 179, 174, 0.1)',
+    }}>
       {/* Header */}
-      <div className="flex justify-between items-center mb-4">
+      <div className="flex justify-between items-center mb-2 pb-2 border-b border-[rgba(101,179,174,0.1)]">
         <button
           onClick={previousMonth}
-          className={`font-bold ${isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}
+          className="font-bold text-[#7FD4D0] hover:text-[#65B3AE] transition text-sm"
         >
           ←
         </button>
-        <h3 className={`font-bold ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-          {monthNames[currentDate.getMonth()]} {currentDate.getFullYear()}
+        <h3 className="font-bold text-white text-xs text-center">
+          {monthNames[currentDate.getMonth()]} <span className="text-[#65B3AE] text-xs">{currentDate.getFullYear()}</span>
         </h3>
         <button
           onClick={nextMonth}
-          className={`font-bold ${isDarkMode ? 'text-gray-300 hover:text-white' : 'text-gray-600 hover:text-gray-900'}`}
+          className="font-bold text-[#7FD4D0] hover:text-[#65B3AE] transition text-sm"
         >
           →
         </button>
       </div>
 
       {/* Day names */}
-      <div className="grid grid-cols-7 gap-1 mb-2">
+      <div className="grid grid-cols-7 gap-0.5 mb-2">
         {dayNames.map((day) => (
-          <div key={day} className={`text-center text-xs font-bold ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>
+          <div key={day} className="text-center text-[10px] font-bold text-[#7FD4D0] opacity-60">
             {day}
           </div>
         ))}
       </div>
 
       {/* Days */}
-      <div className="grid grid-cols-7 gap-1">
-        {days.map((day, idx) => (
-          <button
-            key={idx}
-            onClick={() => day && handleDayClick(day)}
-            className={`
-              text-sm font-semibold py-2 rounded transition
-              ${day === null ? 'text-transparent' : ''}
-              ${day === today.getDate() && isCurrentMonth
-                ? 'bg-amber-400 text-white font-bold'
-                : day
-                ? isDarkMode ? 'hover:bg-gray-600 text-gray-300 cursor-pointer' : 'hover:bg-gray-100 text-gray-700 cursor-pointer'
-                : ''
-              }
-            `}
-          >
-            {day}
-          </button>
-        ))}
-      </div>
+      <div className="grid grid-cols-7 gap-0.5 mb-2">
+        {days.map((day, idx) => {
+          const dayReminders = day ? getRemindersForDate(day) : [];
+          const key = day ? dateKey(day) : `empty-${idx}`;
+          const hasReminders = dayReminders.length > 0;
 
-      {/* Create reminder section */}
-      <div className={`mt-4 pt-4 border-t ${isDarkMode ? 'border-gray-600' : 'border-gray-200'}`}>
-        <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'} mb-2`}>Create Reminder</p>
-        <input
-          type="date"
-          defaultValue={new Date().toISOString().split('T')[0]}
-          className={`w-full px-3 py-2 border rounded text-sm mb-2 ${isDarkMode ? 'bg-gray-600 border-gray-500 text-white' : 'bg-white border-gray-300 text-gray-900'}`}
-        />
-        <input
-          type="text"
-          placeholder="Reminder title"
-          className={`w-full px-3 py-2 border rounded text-sm mb-2 ${isDarkMode ? 'bg-gray-600 border-gray-500 text-white placeholder-gray-400' : 'bg-white border-gray-300 text-gray-900'}`}
-        />
-        <button className="w-full bg-blue-500 text-white font-semibold py-2 rounded hover:bg-blue-600 transition text-sm">
-          Add Reminder
-        </button>
+          return (
+            <div key={idx} className="relative">
+              <button
+                onClick={() => day && handleDayClick(day)}
+                onMouseEnter={() => hasReminders && setHoveredReminderDate(key)}
+                onMouseLeave={() => setHoveredReminderDate(null)}
+                className={`
+                  w-full text-xs font-semibold py-1 rounded transition relative
+                  ${day === null ? 'text-transparent' : ''}
+                  ${day === today.getDate() && isCurrentMonth
+                    ? 'bg-[#65B3AE] text-[#050D20] font-bold hover:bg-[#7FD4D0] mantle-glow-pulse'
+                    : day
+                    ? 'hover:bg-[rgba(101,179,174,0.2)] text-[#7FD4D0] cursor-pointer'
+                    : ''
+                  }
+                `}
+              >
+                {day}
+                {hasReminders && (
+                  <div className="flex justify-center gap-0.5 mt-0.5">
+                    {dayReminders.slice(0, 2).map((_, i) => (
+                      <div key={i} className="w-1 h-1 rounded-full bg-[#65B3AE]"></div>
+                    ))}
+                  </div>
+                )}
+              </button>
+
+              {/* Reminder Tooltip */}
+              {hoveredReminderDate === key && dayReminders.length > 0 && (
+                <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 z-50 whitespace-nowrap">
+                  <div className="bg-[rgba(5,13,32,0.95)] border border-[#65B3AE] rounded-lg p-2 shadow-lg backdrop-filter backdrop-blur-sm">
+                    {dayReminders.map((reminder) => (
+                      <div key={reminder.id} className="flex items-center gap-2 text-xs text-[#7FD4D0] mb-1 last:mb-0">
+                        <span className="text-[10px] text-[#65B3AE]">•</span>
+                        <span>{reminder.title}</span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteReminder?.(reminder.id);
+                          }}
+                          className="ml-2 text-[#ff6b6b] hover:text-[#ff8787] transition text-xs font-bold"
+                          title="Delete reminder"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
     </div>
   );

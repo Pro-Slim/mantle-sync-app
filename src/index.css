@@ -2,8 +2,21 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Mantle Brand Color System */
 :root {
-  --color-mantle: #00D9A3;
+  /* Primary Colors */
+  --mantle-teal: #65B3AE;
+  --mantle-teal-light: #7FD4D0;
+  --mantle-teal-dark: #008F5A;
+  --mantle-dark-blue: #050D20;
+  --mantle-desaturated-green: #0E2520;
+
+  /* Neutrals */
+  --mantle-white: #FFFFFF;
+  --mantle-black: #000000;
+
+  /* Legacy (kept for compatibility) */
+  --color-mantle: #65B3AE;
   --color-byreal: #9D4EDD;
   --color-solana: #FFB703;
   --color-meth: #00D4FF;
@@ -17,11 +30,11 @@ html, body, #root {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
+  font-family: 'GT Walsheim', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background: linear-gradient(135deg, #050D20 0%, #0E2520 100%);
+  color: #FFFFFF;
 }
 
 /* Smooth scrolling */
@@ -35,21 +48,126 @@ svg text {
   pointer-events: none;
 }
 
-/* Custom scrollbar */
+/* Custom scrollbar - Mantle styled */
 ::-webkit-scrollbar {
-  height: 8px;
-  width: 8px;
+  height: 10px;
+  width: 10px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: rgba(5, 13, 32, 0.5);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 4px;
+  background: linear-gradient(180deg, #65B3AE 0%, #008F5A 100%);
+  border-radius: 5px;
+  border: 2px solid rgba(5, 13, 32, 0.8);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: linear-gradient(180deg, #7FD4D0 0%, #00B373 100%);
+}
+
+/* Pulsing Animation */
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(101, 179, 174, 0.4),
+                inset 0 0 8px rgba(101, 179, 174, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 16px rgba(101, 179, 174, 0.6),
+                inset 0 0 16px rgba(101, 179, 174, 0.2);
+  }
+}
+
+@keyframes pulse-scale {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+}
+
+@keyframes rotate-glow {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes float-up {
+  0% {
+    transform: translateY(0px);
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-8px);
+    opacity: 0.7;
+  }
+}
+
+/* Utility classes */
+.mantle-glow {
+  box-shadow: 0 0 20px rgba(101, 179, 174, 0.4),
+              0 0 40px rgba(101, 179, 174, 0.2),
+              inset 0 0 20px rgba(101, 179, 174, 0.05);
+}
+
+.mantle-glow-pulse {
+  animation: pulse-glow 3s ease-in-out infinite;
+}
+
+.mantle-glow-pulse-fast {
+  animation: pulse-glow 1.5s ease-in-out infinite;
+}
+
+.mantle-scale-pulse {
+  animation: pulse-scale 2s ease-in-out infinite;
+}
+
+.mantle-spin {
+  animation: rotate-glow 8s linear infinite;
+}
+
+.mantle-float {
+  animation: float-up 4s ease-in-out infinite;
+}
+
+/* Frosted glass effect - Mantle style */
+.mantle-frosted {
+  background: rgba(5, 13, 32, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(101, 179, 174, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3),
+              inset 0 1px 1px rgba(101, 179, 174, 0.1);
+}
+
+.mantle-frosted-light {
+  background: rgba(127, 212, 208, 0.05);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(101, 179, 174, 0.15);
+}
+
+/* 3D depth effects */
+.mantle-depth-1 {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3),
+              0 0 1px rgba(101, 179, 174, 0.2);
+}
+
+.mantle-depth-2 {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4),
+              0 0 2px rgba(101, 179, 174, 0.3),
+              inset 0 1px 1px rgba(101, 179, 174, 0.1);
+}
+
+.mantle-depth-3 {
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5),
+              0 0 4px rgba(101, 179, 174, 0.4),
+              inset 0 2px 4px rgba(101, 179, 174, 0.15);
 }

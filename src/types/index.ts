@@ -11,6 +11,7 @@ export interface Event {
   applicationLink?: string;
   xPostLink?: string;
   winnerCriteria?: string;
+  winnerAnnouncementDate?: Date;
   notionLink?: string;
   rewards?: {
     amount: string;
@@ -21,6 +22,12 @@ export interface Event {
   };
   tags: string[];
   isFavorite: boolean;
+}
+
+export interface CalendarReminder {
+  id: string;
+  date: Date;
+  title: string;
 }
 
 export interface Reminder {

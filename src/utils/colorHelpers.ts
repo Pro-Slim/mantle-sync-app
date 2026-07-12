@@ -13,6 +13,59 @@ export const getCategoryColor = (category: Event['category']): string => {
   return colorMap[category] || colorMap.other;
 };
 
+export interface NodeColorState {
+  color: string;
+  hasRedRing: boolean;
+  isPulsing: boolean;
+  pulseColor: 'yellow' | 'red' | null;
+}
+
+export const getNodeColorByRewardStatus = (event: Event): NodeColorState => {
+  const now = new Date();
+  const endDatePassed = event.endDate && event.endDate < now;
+  const startDatePassed = event.startDate < now;
+  const eventInProgress = startDatePassed && event.endDate && event.endDate > now;
+
+  // No rewards info - use category color
+  if (!event.rewards) {
+    if (eventInProgress) {
+      return { color: '#FBBF24', hasRedRing: false, isPulsing: true, pulseColor: 'yellow' };
+    }
+    return { color: getCategoryColor(event.category), hasRedRing: false, isPulsing: false, pulseColor: null };
+  }
+
+  const status = event.rewards.status;
+  const defaultDeliveryDatePassed = event.rewards.defaultDeliveryDate < now;
+  const realizedDeliveryDatePassed = event.rewards.realizedDeliveryDate && event.rewards.realizedDeliveryDate < now;
+  const anyDeliveryDatePassed = defaultDeliveryDatePassed || realizedDeliveryDatePassed;
+
+  // In progress event with rewards
+  if (eventInProgress) {
+    return { color: '#FBBF24', hasRedRing: false, isPulsing: true, pulseColor: 'yellow' };
+  }
+
+  // Event ended
+  if (endDatePassed) {
+    // Delivered - gray
+    if (status === 'delivered') {
+      return { color: '#9CA3AF', hasRedRing: false, isPulsing: false, pulseColor: null };
+    }
+
+    // Delayed (delivery date passed but not delivered) - green with pulsing red ring
+    if (anyDeliveryDatePassed && status === 'delayed') {
+      return { color: '#10B981', hasRedRing: true, isPulsing: true, pulseColor: 'red' };
+    }
+
+    // Pending (delivery date not reached yet) - green
+    if (status === 'pending') {
+      return { color: '#10B981', hasRedRing: false, isPulsing: false, pulseColor: null };
+    }
+  }
+
+  // Default
+  return { color: getCategoryColor(event.category), hasRedRing: false, isPulsing: false, pulseColor: null };
+};
+
 export const getCategoryLabel = (category: Event['category']): string => {
   const labels: Record<Event['category'], string> = {
     mantle: 'MANTLE',
