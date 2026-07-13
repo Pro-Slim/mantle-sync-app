@@ -11,6 +11,7 @@ export const TIMELINE_PADDING = 60;
 interface TimelineProps {
   events: Event[];
   onEventClick?: (event: Event) => void;
+  onEventSelect?: (event: Event | null) => void;
   onEventUpdate?: (event: Event) => void;
   onEventDelete?: (eventId: string) => void;
   onAddCountdown?: (eventId: string) => void;
@@ -22,6 +23,7 @@ interface TimelineProps {
 const Timeline: React.FC<TimelineProps> = ({
   events,
   onEventClick,
+  onEventSelect,
   onEventUpdate,
   onEventDelete,
   onAddCountdown,
@@ -45,8 +47,11 @@ const Timeline: React.FC<TimelineProps> = ({
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (timelineRef.current && !timelineRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      const isEventDetailsPanel = (target as Element).closest('[data-event-details-panel]');
+      if (timelineRef.current && !timelineRef.current.contains(target) && !isEventDetailsPanel) {
         setSelectedEventId(null);
+        onEventSelect?.(null);
       }
     };
     // Reset drag state even when the mouse is released outside the timeline/window
@@ -67,6 +72,7 @@ const Timeline: React.FC<TimelineProps> = ({
 
   const handleNodeClick = (event: Event) => {
     setSelectedEventId(event.id);
+    onEventSelect?.(event);
     onEventClick?.(event);
   };
 

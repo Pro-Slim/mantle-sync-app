@@ -13,6 +13,8 @@ interface EventCardProps {
 const EventCard: React.FC<EventCardProps> = ({ event, onClose, onEdit, onDelete, onAddCountdown }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedEvent, setEditedEvent] = useState(event);
+  const [showRequirementsDetails, setShowRequirementsDetails] = useState(false);
+  const [showWinnerCriteriaDetails, setShowWinnerCriteriaDetails] = useState(false);
 
   const inputBgClass = 'bg-[rgba(101,179,174,0.1)] border-[rgba(101,179,174,0.3)] text-white placeholder-[rgba(255,255,255,0.4)]';
 
@@ -59,13 +61,31 @@ const EventCard: React.FC<EventCardProps> = ({ event, onClose, onEdit, onDelete,
 
           {/* Requirements */}
           <div>
-            <label className="text-xs font-semibold text-[#7FD4D0] block mb-1">Requirements</label>
+            <label className="text-xs font-semibold text-[#7FD4D0] flex items-center gap-2 mb-1">
+              Requirements
+              <button
+                type="button"
+                onClick={() => setShowRequirementsDetails(!showRequirementsDetails)}
+                className="w-4 h-4 flex items-center justify-center rounded hover:bg-[#65B3AE] hover:bg-opacity-20 transition"
+                title="Add additional requirement details"
+              >
+                +
+              </button>
+            </label>
             <textarea
               value={editedEvent.requirements || ''}
               onChange={(e) => setEditedEvent({ ...editedEvent, requirements: e.target.value || undefined })}
               className={`w-full px-2 py-1 border rounded text-sm h-10 resize-none ${inputBgClass}`}
               placeholder="e.g., Developer account, GitHub submission"
             />
+            {showRequirementsDetails && (
+              <textarea
+                value={editedEvent.requirementsDetails || ''}
+                onChange={(e) => setEditedEvent({ ...editedEvent, requirementsDetails: e.target.value || undefined })}
+                className={`w-full px-2 py-1 border rounded text-sm h-10 resize-none mt-1 ${inputBgClass}`}
+                placeholder="Additional requirement details"
+              />
+            )}
           </div>
 
           {/* Resources */}
@@ -127,12 +147,41 @@ const EventCard: React.FC<EventCardProps> = ({ event, onClose, onEdit, onDelete,
 
           {/* Winner Criteria */}
           <div>
-            <label className="text-xs font-semibold text-[#7FD4D0] block mb-1">Winner Criteria</label>
+            <label className="text-xs font-semibold text-[#7FD4D0] flex items-center gap-2 mb-1">
+              Winner Criteria
+              <button
+                type="button"
+                onClick={() => setShowWinnerCriteriaDetails(!showWinnerCriteriaDetails)}
+                className="w-4 h-4 flex items-center justify-center rounded hover:bg-[#65B3AE] hover:bg-opacity-20 transition"
+                title="Add additional winner criteria details"
+              >
+                +
+              </button>
+            </label>
             <textarea
               value={editedEvent.winnerCriteria || ''}
               onChange={(e) => setEditedEvent({ ...editedEvent, winnerCriteria: e.target.value || undefined })}
               className={`w-full px-2 py-1 border rounded text-sm h-10 resize-none ${inputBgClass}`}
               placeholder="e.g., Code quality, innovation, completeness"
+            />
+            {showWinnerCriteriaDetails && (
+              <textarea
+                value={editedEvent.winnerCriteriaDetails || ''}
+                onChange={(e) => setEditedEvent({ ...editedEvent, winnerCriteriaDetails: e.target.value || undefined })}
+                className={`w-full px-2 py-1 border rounded text-sm h-10 resize-none mt-1 ${inputBgClass}`}
+                placeholder="Additional winner criteria details"
+              />
+            )}
+          </div>
+
+          {/* Winners Pine */}
+          <div>
+            <label className="text-xs font-semibold text-[#7FD4D0] block mb-1">Winners Pine</label>
+            <input
+              type="text"
+              value={editedEvent.winnersPine || ''}
+              onChange={(e) => setEditedEvent({ ...editedEvent, winnersPine: e.target.value || undefined })}
+              className={`w-full px-2 py-1 border rounded text-sm ${inputBgClass}`}
             />
           </div>
 
@@ -238,6 +287,17 @@ const EventCard: React.FC<EventCardProps> = ({ event, onClose, onEdit, onDelete,
               </div>
             </div>
           )}
+
+          {/* Remarks */}
+          <div className="border-t border-[rgba(101,179,174,0.1)] pt-3">
+            <label className="text-xs font-semibold text-[#7FD4D0] block mb-1">Remarks</label>
+            <textarea
+              value={editedEvent.remarks || ''}
+              onChange={(e) => setEditedEvent({ ...editedEvent, remarks: e.target.value || undefined })}
+              className={`w-full px-2 py-1 border rounded text-sm h-10 resize-none ${inputBgClass}`}
+              placeholder="Any remarks or notes about this event"
+            />
+          </div>
         </div>
 
         {/* Save/Cancel Buttons */}

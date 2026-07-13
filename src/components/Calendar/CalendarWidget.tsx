@@ -1,22 +1,27 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { CalendarReminder } from '../../types';
+
+const DOUBLE_CLICK_WINDOW_MS = 250;
 
 interface CalendarWidgetProps {
   onDateSelect?: (date: Date) => void;
+  onDateDoubleClick?: (date: Date) => void;
   reminders?: CalendarReminder[];
   onDeleteReminder?: (reminderId: string) => void;
 }
 
-const CalendarWidget: React.FC<CalendarWidgetProps> = ({ onDateSelect, reminders = [], onDeleteReminder }) => {
-  const [currentDate, setCurrentDate] = useState(new Date(2026, 6, 4)); // July 4, 2026
+const CalendarWidget: React.FC<CalendarWidgetProps> = ({ onDateSelect, onDateDoubleClick, reminders = [], onDeleteReminder }) => {
+  const [currentDate, setCurrentDate] = useState(new Date());
   const [hoveredReminderDate, setHoveredReminderDate] = useState<string | null>(null);
+  const pendingClickRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const getDaysInMonth = (date: Date) => {
     return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
   };
 
+  // Monday-first index: native getDay() is 0=Sun..6=Sat, shift so 0=Mon..6=Sun.
   const getFirstDayOfMonth = (date: Date) => {
-    return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+    return (new Date(date.getFullYear(), date.getMonth(), 1).getDay() + 6) % 7;
   };
 
   const previousMonth = () => {
@@ -27,9 +32,26 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ onDateSelect, reminders
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1));
   };
 
+  // A native dblclick fires two click events first, so delay the single-click
+  // action just long enough to be cancelled if a double-click follows.
   const handleDayClick = (day: number) => {
+    if (pendingClickRef.current) {
+      clearTimeout(pendingClickRef.current);
+    }
     const selectedDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
-    onDateSelect?.(selectedDate);
+    pendingClickRef.current = setTimeout(() => {
+      pendingClickRef.current = null;
+      onDateSelect?.(selectedDate);
+    }, DOUBLE_CLICK_WINDOW_MS);
+  };
+
+  const handleDayDoubleClick = (day: number) => {
+    if (pendingClickRef.current) {
+      clearTimeout(pendingClickRef.current);
+      pendingClickRef.current = null;
+    }
+    const selectedDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+    onDateDoubleClick?.(selectedDate);
   };
 
   const getRemindersForDate = (day: number): CalendarReminder[] => {
@@ -45,7 +67,7 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ onDateSelect, reminders
 
   const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'];
-  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
   const daysInMonth = getDaysInMonth(currentDate);
   const firstDay = getFirstDayOfMonth(currentDate);
@@ -106,8 +128,10 @@ const CalendarWidget: React.FC<CalendarWidgetProps> = ({ onDateSelect, reminders
             <div key={idx} className="relative">
               <button
                 onClick={() => day && handleDayClick(day)}
+                onDoubleClick={() => day && handleDayDoubleClick(day)}
                 onMouseEnter={() => hasReminders && setHoveredReminderDate(key)}
                 onMouseLeave={() => setHoveredReminderDate(null)}
+                title={day ? 'Click: go to date on timeline · Double-click: add reminder' : undefined}
                 className={`
                   w-full text-xs font-semibold py-1 rounded transition relative
                   ${day === null ? 'text-transparent' : ''}

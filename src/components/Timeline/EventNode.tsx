@@ -1,5 +1,6 @@
 import React from 'react';
 import { Event } from '../../types';
+import { playEventHoverSound, isSoundMuted } from '../../utils/soundEffects';
 
 interface EventNodeProps {
   event: Event;
@@ -73,7 +74,10 @@ const EventNode: React.FC<EventNodeProps> = ({
           cy={y}
           r={20}
           fill="transparent"
-          onMouseEnter={() => (onHoverWithDelay ? onHoverWithDelay(event.id) : onHover(event.id))}
+          onMouseEnter={() => {
+            if (!isSoundMuted()) playEventHoverSound();
+            onHoverWithDelay ? onHoverWithDelay(event.id) : onHover(event.id);
+          }}
           onMouseLeave={() => (onHoverWithDelay ? onHoverWithDelay(null) : onHover(null))}
           onClick={onClick}
           style={{ pointerEvents: 'auto', cursor: 'pointer' }}

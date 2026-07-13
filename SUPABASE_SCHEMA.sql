@@ -28,6 +28,10 @@ CREATE TABLE public.events (
   reward_status TEXT CHECK (reward_status IN ('pending', 'delayed', 'delivered')),
   tags TEXT[] DEFAULT '{}',
   is_favorite BOOLEAN DEFAULT FALSE,
+  requirements_details TEXT,
+  winner_criteria_details TEXT,
+  winners_pine TEXT,
+  remarks TEXT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   -- For conflict resolution

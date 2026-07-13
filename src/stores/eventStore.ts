@@ -205,6 +205,10 @@ function eventToDb(event: Partial<Event>) {
     reward_status: event.rewards?.status,
     tags: event.tags,
     is_favorite: event.isFavorite,
+    requirements_details: event.requirementsDetails,
+    winner_criteria_details: event.winnerCriteriaDetails,
+    winners_pine: event.winnersPine,
+    remarks: event.remarks,
   };
 }
 
@@ -240,5 +244,9 @@ function dbToEvent(row: Record<string, unknown>): Event {
         : undefined,
     tags: (row.tags as string[]) || [],
     isFavorite: (row.is_favorite as boolean) || false,
+    requirementsDetails: (row.requirements_details as string) || undefined,
+    winnerCriteriaDetails: (row.winner_criteria_details as string) || undefined,
+    winnersPine: (row.winners_pine as string) || undefined,
+    remarks: (row.remarks as string) || undefined,
   };
 }

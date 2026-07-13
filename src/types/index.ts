@@ -22,6 +22,10 @@ export interface Event {
   };
   tags: string[];
   isFavorite: boolean;
+  requirementsDetails?: string;
+  winnerCriteriaDetails?: string;
+  winnersPine?: string;
+  remarks?: string;
 }
 
 export interface CalendarReminder {
