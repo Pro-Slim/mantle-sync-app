@@ -41,7 +41,7 @@ const AdminPanel: React.FC = () => {
     }
   };
 
-  const updateUserStatus = async (userId: string, newStatus: 'approved' | 'rejected') => {
+  const updateUserStatus = async (userId: string, newStatus: 'approved' | 'rejected' | 'pending') => {
     try {
       const { error } = await supabase
         .from('users')
