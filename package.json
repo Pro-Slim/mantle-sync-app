@@ -11,10 +11,11 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.38.4",
     "dexie": "^3.2.4",
+    "framer-motion": "^12.42.2",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "zustand": "^4.4.2",
-    "xlsx": "^0.18.5"
+    "xlsx": "^0.18.5",
+    "zustand": "^4.4.2"
   },
   "devDependencies": {
     "@types/node": "^20.10.0",

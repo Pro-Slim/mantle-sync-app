@@ -7,6 +7,9 @@ import SettingsIcon from '../components/Icons/SettingsIcon';
 import ApprovalStatus from '../components/ApprovalStatus';
 import AdminPanel from '../components/AdminPanel';
 import Tutorial from '../components/Tutorial';
+import OnlineUsers from '../components/OnlineUsers';
+import LoginAnimation from '../components/LoginAnimation';
+import { usePresence } from '../hooks/usePresence';
 import { isAdmin } from '../constants/admins';
 import { Event, CalendarReminder } from '../types';
 import { parseCSV, csvToEvents, eventsToCSV } from '../utils/csvImporter';
@@ -29,12 +32,15 @@ interface CountdownClockState {
 
 
 const Dashboard: React.FC = () => {
-  const { user, session, userApprovalStatus } = useAuth();
+  const { user, session, userApprovalStatus, signOut } = useAuth();
   const [showAuthModal, setShowAuthModal] = React.useState(!session);
+  const [showLoginAnimation, setShowLoginAnimation] = React.useState(session ? true : false);
+  const [hasPlayedAnimation, setHasPlayedAnimation] = React.useState(false);
   const { events, fetchEvents } = useEventStore();
   const { reminders } = useReminderStore();
   const { logs, fetchLogs, addLog } = useLogStore();
-  
+  const { onlineUsers, loading: presenceLoading } = usePresence(user?.id || null, user?.email);
+
   const [showAddModal, setShowAddModal] = React.useState(false);
   const [showAdminPanel, setShowAdminPanel] = React.useState(false);
   const [tutorialOpen, setTutorialOpen] = React.useState(false);
@@ -114,6 +120,30 @@ const Dashboard: React.FC = () => {
       fetchLogs(user.id);
     }
   }, [user?.id, fetchEvents, fetchLogs]);
+
+  // Sync the auth modal to session state. The "session present" branch is
+  // needed because showAuthModal's initial value is computed from `session`
+  // before Supabase's async getSession() has resolved, so it defaults to
+  // true even when a valid session is about to be restored. The "session
+  // absent" branch reopens the modal after signOut(), and resets the login
+  // animation so it plays again on the next sign-in.
+  useEffect(() => {
+    if (session) {
+      setShowAuthModal(false);
+    } else {
+      setShowAuthModal(true);
+      setShowLoginAnimation(false);
+      setHasPlayedAnimation(false);
+    }
+  }, [session]);
+
+  // Handle login animation
+  useEffect(() => {
+    if (session && !hasPlayedAnimation) {
+      setShowLoginAnimation(true);
+      setHasPlayedAnimation(true);
+    }
+  }, [session, hasPlayedAnimation]);
 
   // Scrolls the timeline so `date` is centered. Shared by the mount-scroll
   // effect, "Center on Today", and calendar date navigation so the position
@@ -366,9 +396,6 @@ const Dashboard: React.FC = () => {
     }
 
     try {
-      // Refresh events from database before export
-      await fetchEvents(user.id);
-
       const currentEvents = useEventStore.getState().events;
 
       if (currentEvents.length === 0) {
@@ -469,6 +496,11 @@ const Dashboard: React.FC = () => {
         }
       }}
     >
+      {/* Login Animation */}
+      {showLoginAnimation && (
+        <LoginAnimation onComplete={() => setShowLoginAnimation(false)} />
+      )}
+
       {/* Auth Modal */}
       {showAuthModal && <AuthModal onAuthSuccess={() => setShowAuthModal(false)} />}
 
@@ -567,7 +599,7 @@ const Dashboard: React.FC = () => {
               {logoMusicMinimized && (
                 <button
                   onClick={() => setLogoMusicMinimized(false)}
-                  className="fixed top-4 left-4 z-50 w-10 h-10 flex items-center justify-center mantle-frosted-light text-[#7FD4D0] hover:text-[#65B3AE] transition rounded-lg md:left-20"
+                  className="fixed top-4 left-1/2 -translate-x-1/2 z-50 w-10 h-10 flex items-center justify-center mantle-frosted-light text-[#7FD4D0] hover:text-[#65B3AE] transition rounded-lg"
                   title="Expand music player"
                 >
                   ♪
@@ -577,7 +609,10 @@ const Dashboard: React.FC = () => {
           )}
 
           {/* Right Section: Control Buttons */}
-          <div className="flex gap-2 items-center flex-shrink-0">
+          <div className="flex gap-3 items-center flex-shrink-0">
+            {/* Online Users Indicator */}
+            <OnlineUsers onlineUsers={onlineUsers} loading={presenceLoading} />
+
             {/* Settings Menu Button */}
             <div ref={settingsRef} className="relative">
               <button
@@ -833,6 +868,26 @@ const Dashboard: React.FC = () => {
                         Admin Panel
                       </button>
                     )}
+
+                    {/* Divider */}
+                    <div className="my-2 h-px bg-[rgba(101,179,174,0.2)]" />
+
+                    {/* Sign Out */}
+                    <button
+                      data-tutorial="sign-out"
+                      onClick={() => {
+                        setSettingsOpen(false);
+                        signOut();
+                      }}
+                      className="w-full px-4 py-2 rounded-lg text-left text-[#7FD4D0] font-semibold text-sm transition-all hover:bg-[#65B3AE] hover:bg-opacity-20 flex items-center gap-3"
+                      title="Sign out"
+                    >
+                      <svg viewBox="0 0 24 24" className="w-5 h-5 text-[#65B3AE]">
+                        <path fill="currentColor" d="M17 7l-1.41 1.41L17.17 10H9v2h8.17l-1.58 1.59L17 15l4-4z"/>
+                        <path fill="currentColor" d="M5 5h7V3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h7v-2H5V5z"/>
+                      </svg>
+                      Sign Out
+                    </button>
                   </div>
                 </div>
               )}
