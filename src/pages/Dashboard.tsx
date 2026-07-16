@@ -15,6 +15,7 @@ import { Event, CalendarReminder } from '../types';
 import { parseCSV, csvToEvents, eventsToCSV } from '../utils/csvImporter';
 import { getPositionFromDate, toDateInputValue, parseDateInputValue, formatDate } from '../utils/dateHelpers';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../utils/supabaseClient';
 import { useEventStore } from '../stores/eventStore';
 import { useReminderStore } from '../stores/reminderStore';
 import { useLogStore } from '../stores/logStore';
@@ -30,6 +31,18 @@ interface CountdownClockState {
   type: 'endDate' | 'rewardDelivery';
 }
 
+// Reads a File into a base64 string (no `data:...;base64,` prefix) for
+// passing to the send-improvement-email edge function as a Resend attachment.
+const fileToBase64 = (file: File): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      resolve(result.slice(result.indexOf(',') + 1));
+    };
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
 
 const Dashboard: React.FC = () => {
   const { user, session, userApprovalStatus, signOut } = useAuth();
@@ -1027,15 +1040,31 @@ const Dashboard: React.FC = () => {
                 />
                 <button
                   onClick={async () => {
-                    if (improvementNotes.trim()) {
-                      const details = `Suggestion: ${improvementNotes}${improvementAttachment ? ` | Attachment: ${improvementAttachment.name}` : ''}`;
-                      await addLog('improvement_suggestion', details);
-                      alert('✅ Improvement suggestion sent!');
-                      setImprovementNotes('');
-                      setImprovementAttachment(null);
-                    } else {
+                    if (!improvementNotes.trim()) {
                       alert('Please add a suggestion before sending.');
+                      return;
                     }
+
+                    const details = `Suggestion: ${improvementNotes}${improvementAttachment ? ` | Attachment: ${improvementAttachment.name}` : ''}`;
+                    await addLog('improvement_suggestion', details);
+
+                    try {
+                      const attachment = improvementAttachment
+                        ? { name: improvementAttachment.name, contentBase64: await fileToBase64(improvementAttachment) }
+                        : undefined;
+
+                      const { error } = await supabase.functions.invoke('send-improvement-email', {
+                        body: { suggestion: improvementNotes, attachment },
+                      });
+
+                      if (error) throw error;
+                      alert('✅ Improvement suggestion sent!');
+                    } catch (error) {
+                      alert(`⚠️ Saved, but the email couldn't be sent: ${String(error)}`);
+                    }
+
+                    setImprovementNotes('');
+                    setImprovementAttachment(null);
                   }}
                   className="absolute bottom-3 right-3 w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[#65B3AE] hover:bg-opacity-20 transition-all"
                   title="Send suggestion"
