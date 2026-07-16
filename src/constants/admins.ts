@@ -1,12 +1,10 @@
-// Hardcoded admin emails for access control
-// Update these with your 6 admin email addresses
+// Hardcoded admin emails for access control.
+// Keep this in sync by hand with the matching email list in
+// src/utils/supabase-secure-admin-approval.sql -- there is no single
+// source of truth between the app and the database for this list.
 export const ADMIN_EMAILS = [
   'slimonshark.login@gmail.com', // Owner
-  'minh@mantle.xyz', // Admin 2 - CHANGE THIS
-  'luis.matzl13@gmail.com', // Admin 3 - CHANGE THIS
-  'hadukemvv@gmail.com', // Admin 4 - CHANGE THIS
-  'kirill.calm@gmail.com', // Admin 5 - CHANGE THIS
-  'c4x4p4@gmail.com', // Admin 6 - CHANGE THIS
+  'minh@mantle.xyz',
 ];
 
 export const isAdmin = (email?: string): boolean => {
