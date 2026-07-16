@@ -550,6 +550,7 @@ const Dashboard: React.FC = () => {
             {/* Title */}
             <div className="flex-shrink-0 flex items-center gap-3">
               <button
+                data-tutorial="music-toggle"
                 onClick={() => setLogoMusicOpen(!logoMusicOpen)}
                 className="p-0 border-0 bg-transparent cursor-pointer"
                 title={logoMusicOpen ? 'Stop music' : 'Play a track'}
@@ -574,6 +575,7 @@ const Dashboard: React.FC = () => {
               <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 mantle-frosted rounded-xl p-2 shadow-2xl w-80" style={{ display: logoMusicMinimized ? 'none' : 'block' }}>
                 <div className="flex justify-end mb-2">
                   <button
+                    data-tutorial="music-minimize"
                     onClick={() => setLogoMusicMinimized(true)}
                     className="text-lg text-[#7FD4D0] hover:text-[#65B3AE] transition"
                     title="Minimize music player"
@@ -588,12 +590,12 @@ const Dashboard: React.FC = () => {
                   scrolling="no"
                   frameBorder="no"
                   allow="autoplay; encrypted-media"
-                  src="https://w.soundcloud.com/player/?url=https%3A//api.soundcloud.com/tracks/soundcloud%253Atracks%253A513636780&color=%23242c2c&auto_play=true&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true"
+                  src="https://w.soundcloud.com/player/?url=https%3A//soundcloud.com/joemarsala/gotta-be-this-or-that-original&color=%23242c2c&auto_play=true&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true"
                 />
                 <div className="text-[10px] text-[#7FD4D0] mt-1 truncate">
-                  <a href="https://soundcloud.com/user-956334953" target="_blank" rel="noreferrer" className="hover:underline">coldplay songs</a>
+                  <a href="https://soundcloud.com/joemarsala" target="_blank" rel="noreferrer" className="hover:underline">Joe Marsala</a>
                   {' · '}
-                  <a href="https://soundcloud.com/user-956334953/pitch-shifted-coldplay-a-sky-full-of-stars-official-video-2" target="_blank" rel="noreferrer" className="hover:underline">Coldplay - A Sky Full Of Stars</a>
+                  <a href="https://soundcloud.com/joemarsala/gotta-be-this-or-that-original" target="_blank" rel="noreferrer" className="hover:underline">Gotta Be This or That (Original)</a>
                 </div>
               </div>
               {logoMusicMinimized && (
@@ -1469,6 +1471,10 @@ const Dashboard: React.FC = () => {
           } else {
             setDetailsViewMode('countdown');
           }
+        }}
+        onRequireMusicOpen={(open) => {
+          setLogoMusicOpen(open);
+          if (open) setLogoMusicMinimized(false);
         }}
         isAdmin={!!user?.email && isAdmin(user.email)}
       />

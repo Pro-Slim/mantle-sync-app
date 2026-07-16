@@ -9,6 +9,7 @@ interface TutorialStep {
   requiresSettingsOpen?: boolean; // opens the Settings dropdown while this step is active
   requiresSidebarOpen?: boolean; // opens the sidebar (calendar / To Improve) while this step is active
   requiresTableView?: boolean; // switches to table view with an event selected while this step is active
+  requiresMusicOpen?: boolean; // opens the music player while this step is active
   adminOnly?: boolean; // only shown to admin users
 }
 
@@ -39,7 +40,7 @@ const SETTINGS_STEP_DEFS: SettingsStepDef[] = [
   {
     id: 'settings-switch-user',
     title: '👤 Switch User',
-    description: 'Sign out or switch to a different account.',
+    description: 'Opens the login form so you can sign in as a different account, replacing your current session.',
     target: '[data-tutorial="switch-user"]',
   },
   {
@@ -103,6 +104,12 @@ const SETTINGS_STEP_DEFS: SettingsStepDef[] = [
     target: '[data-tutorial="admin-panel"]',
     adminOnly: true,
   },
+  {
+    id: 'settings-sign-out',
+    title: '🚪 Sign Out',
+    description: 'Ends your session and takes you back to the login screen.',
+    target: '[data-tutorial="sign-out"]',
+  },
 ];
 
 const TUTORIAL_STEPS: TutorialStep[] = [
@@ -118,6 +125,21 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     description: 'Visualize all your events on an interactive timeline. Hover over events to see details, click to edit.',
     target: '[style*="overflow: hidden"]',
     position: 'bottom',
+  },
+  {
+    id: 'music-player',
+    title: '🎵 Music Player',
+    description: 'Click the Mantle logo to play (or stop) a background track right here in the header.',
+    target: '[data-tutorial="music-toggle"]',
+    position: 'bottom',
+  },
+  {
+    id: 'music-minimize',
+    title: '➖ Minimize the Player',
+    description: 'While it\'s playing, click this − button to shrink the player down to a small floating note icon so it stays out of your way. Click the note icon again to bring it back.',
+    target: '[data-tutorial="music-minimize"]',
+    position: 'bottom',
+    requiresMusicOpen: true,
   },
   {
     id: 'sidebar',
@@ -172,6 +194,7 @@ interface TutorialProps {
   onRequireSettingsOpen?: (open: boolean) => void;
   onRequireSidebarOpen?: (open: boolean) => void;
   onRequireTableView?: (open: boolean) => void;
+  onRequireMusicOpen?: (open: boolean) => void;
   isAdmin?: boolean;
 }
 
@@ -181,6 +204,7 @@ const Tutorial: React.FC<TutorialProps> = ({
   onRequireSettingsOpen,
   onRequireSidebarOpen,
   onRequireTableView,
+  onRequireMusicOpen,
   isAdmin = false,
 }) => {
   const [currentStep, setCurrentStep] = useState(0);
@@ -197,7 +221,8 @@ const Tutorial: React.FC<TutorialProps> = ({
     onRequireSettingsOpen?.(!!step?.requiresSettingsOpen);
     onRequireSidebarOpen?.(!!step?.requiresSidebarOpen);
     onRequireTableView?.(!!step?.requiresTableView);
-  }, [isOpen, step?.id, onRequireSettingsOpen, onRequireSidebarOpen, onRequireTableView]);
+    onRequireMusicOpen?.(!!step?.requiresMusicOpen);
+  }, [isOpen, step?.id, onRequireSettingsOpen, onRequireSidebarOpen, onRequireTableView, onRequireMusicOpen]);
 
   // Measure the target after the DOM has actually updated (e.g. once the
   // Settings dropdown has opened) instead of on the same tick it's requested,
@@ -223,7 +248,7 @@ const Tutorial: React.FC<TutorialProps> = ({
       cancelAnimationFrame(raf2);
       window.removeEventListener('resize', measure);
     };
-  }, [isOpen, step?.id, step?.target, step?.requiresSettingsOpen, step?.requiresSidebarOpen, step?.requiresTableView]);
+  }, [isOpen, step?.id, step?.target, step?.requiresSettingsOpen, step?.requiresSidebarOpen, step?.requiresTableView, step?.requiresMusicOpen]);
 
   if (!isOpen) return null;
 
@@ -231,6 +256,7 @@ const Tutorial: React.FC<TutorialProps> = ({
     onRequireSettingsOpen?.(false);
     onRequireSidebarOpen?.(false);
     onRequireTableView?.(false);
+    onRequireMusicOpen?.(false);
   };
 
   const handleNext = () => {
