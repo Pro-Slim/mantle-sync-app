@@ -13,7 +13,7 @@ const MAX_RETRIES = 3;
 export const syncAll = async (userId: string): Promise<void> => {
   await processQueue(userId);
   await Promise.all([
-    useEventStore.getState().fetchEvents(userId),
+    useEventStore.getState().fetchEvents(),
     useReminderStore.getState().fetchReminders(userId),
     useLogStore.getState().fetchLogs(userId),
   ]);

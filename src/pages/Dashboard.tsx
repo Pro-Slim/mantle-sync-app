@@ -116,7 +116,7 @@ const Dashboard: React.FC = () => {
   // Fetch data when component mounts or user changes
   useEffect(() => {
     if (user?.id) {
-      fetchEvents(user.id);
+      fetchEvents();
       fetchLogs(user.id);
     }
   }, [user?.id, fetchEvents, fetchLogs]);

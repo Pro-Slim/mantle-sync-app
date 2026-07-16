@@ -2,11 +2,11 @@
 // Update these with your 6 admin email addresses
 export const ADMIN_EMAILS = [
   'slimonshark.login@gmail.com', // Owner
-  'admin2@example.com', // Admin 2 - CHANGE THIS
-  'admin3@example.com', // Admin 3 - CHANGE THIS
-  'admin4@example.com', // Admin 4 - CHANGE THIS
-  'admin5@example.com', // Admin 5 - CHANGE THIS
-  'admin6@example.com', // Admin 6 - CHANGE THIS
+  'minh@mantle.xyz', // Admin 2 - CHANGE THIS
+  'luis.matzl13@gmail.com', // Admin 3 - CHANGE THIS
+  'hadukemvv@gmail.com', // Admin 4 - CHANGE THIS
+  'kirill.calm@gmail.com', // Admin 5 - CHANGE THIS
+  'c4x4p4@gmail.com', // Admin 6 - CHANGE THIS
 ];
 
 export const isAdmin = (email?: string): boolean => {

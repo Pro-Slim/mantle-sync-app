@@ -94,7 +94,9 @@ ALTER TABLE public.reminders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.activity_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.conflict_log ENABLE ROW LEVEL SECURITY;
 
--- RLS Policies for events
+-- RLS Policies for events (private-per-user baseline; to make the shared
+-- Timeline collaborative, where all approved users see/edit all events, run
+-- src/utils/supabase-shared-collaboration.sql after this file instead)
 CREATE POLICY "Users can view their own events"
   ON public.events FOR SELECT
   USING (auth.uid() = user_id);

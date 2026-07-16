@@ -9,7 +9,7 @@ interface EventStore {
   error: string | null;
   initialized: boolean;
 
-  fetchEvents: (userId: string) => Promise<void>;
+  fetchEvents: () => Promise<void>;
   addEvent: (event: Omit<Event, 'id'>) => Promise<Event | null>;
   updateEvent: (id: string, updates: Partial<Event>) => Promise<Event | null>;
   deleteEvent: (id: string) => Promise<boolean>;
@@ -25,13 +25,12 @@ export const useEventStore = create<EventStore>((set) => ({
   error: null,
   initialized: false,
 
-  fetchEvents: async (userId: string) => {
+  fetchEvents: async () => {
     set({ loading: true, error: null });
     try {
       const { data, error } = await supabase
         .from('events')
         .select('*')
-        .eq('user_id', userId)
         .is('deleted_at', null)
         .order('start_date', { ascending: true });
 
