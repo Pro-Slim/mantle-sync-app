@@ -35,18 +35,16 @@ export const usePresence = (userId: string | null, userEmail?: string) => {
 
     const fetchOnlineUsers = async () => {
       try {
+        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
         const { data, error } = await supabase
           .from('user_presence')
           .select('user_id, email, status, last_seen_at')
-          .eq('status', 'online');
+          .eq('status', 'online')
+          .gt('last_seen_at', fiveMinutesAgo);
 
         if (error) throw error;
 
-        // Filter out users who haven't been active in last 5 minutes
-        const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
-        const activeUsers = (data || []).filter(u => u.last_seen_at > fiveMinutesAgo);
-
-        setOnlineUsers(activeUsers as OnlineUser[]);
+        setOnlineUsers((data || []) as OnlineUser[]);
       } catch (error) {
         console.error('Error fetching online users:', error);
       } finally {

@@ -24,6 +24,7 @@ import { useSyncStatusStore } from '../stores/syncStatusStore';
 import { offlineQueue } from '../utils/offlineQueue';
 import { syncAll } from '../utils/queueSync';
 import { handleButtonHoverSound, playWhooshSound, playGearTurnSound, isSoundMuted, toggleSoundMuted } from '../utils/soundEffects';
+import { fileToBase64 } from '../utils/fileToBase64';
 
 
 interface CountdownClockState {
@@ -31,24 +32,10 @@ interface CountdownClockState {
   type: 'endDate' | 'rewardDelivery';
 }
 
-// Reads a File into a base64 string (no `data:...;base64,` prefix) for
-// passing to the send-improvement-email edge function as a Resend attachment.
-const fileToBase64 = (file: File): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      resolve(result.slice(result.indexOf(',') + 1));
-    };
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
-
 const Dashboard: React.FC = () => {
   const { user, session, userApprovalStatus, signOut } = useAuth();
   const [showAuthModal, setShowAuthModal] = React.useState(!session);
-  const [showLoginAnimation, setShowLoginAnimation] = React.useState(session ? true : false);
-  const [hasPlayedAnimation, setHasPlayedAnimation] = React.useState(false);
+  const [showLoginAnimation, setShowLoginAnimation] = React.useState(false);
   const { events, fetchEvents } = useEventStore();
   const { reminders } = useReminderStore();
   const { logs, fetchLogs, addLog } = useLogStore();
@@ -137,26 +124,18 @@ const Dashboard: React.FC = () => {
   // Sync the auth modal to session state. The "session present" branch is
   // needed because showAuthModal's initial value is computed from `session`
   // before Supabase's async getSession() has resolved, so it defaults to
-  // true even when a valid session is about to be restored. The "session
-  // absent" branch reopens the modal after signOut(), and resets the login
-  // animation so it plays again on the next sign-in.
+  // true even when a valid session is about to be restored. The login
+  // animation is NOT triggered here: reacting to `session` alone can't tell
+  // a restored page-load session apart from an actual sign-in, so it's
+  // triggered explicitly from AuthModal's onAuthSuccess instead.
   useEffect(() => {
     if (session) {
       setShowAuthModal(false);
     } else {
       setShowAuthModal(true);
       setShowLoginAnimation(false);
-      setHasPlayedAnimation(false);
     }
   }, [session]);
-
-  // Handle login animation
-  useEffect(() => {
-    if (session && !hasPlayedAnimation) {
-      setShowLoginAnimation(true);
-      setHasPlayedAnimation(true);
-    }
-  }, [session, hasPlayedAnimation]);
 
   // Scrolls the timeline so `date` is centered. Shared by the mount-scroll
   // effect, "Center on Today", and calendar date navigation so the position
@@ -515,7 +494,14 @@ const Dashboard: React.FC = () => {
       )}
 
       {/* Auth Modal */}
-      {showAuthModal && <AuthModal onAuthSuccess={() => setShowAuthModal(false)} />}
+      {showAuthModal && (
+        <AuthModal
+          onAuthSuccess={() => {
+            setShowAuthModal(false);
+            setShowLoginAnimation(true);
+          }}
+        />
+      )}
 
       {/* Animated Background Elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -603,12 +589,12 @@ const Dashboard: React.FC = () => {
                   scrolling="no"
                   frameBorder="no"
                   allow="autoplay; encrypted-media"
-                  src="https://w.soundcloud.com/player/?url=https%3A//soundcloud.com/joemarsala/gotta-be-this-or-that-original&color=%23242c2c&auto_play=true&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true"
+                  src="https://w.soundcloud.com/player/?url=https%3A//soundcloud.com/markronson/suzanne&color=%23242c2c&auto_play=true&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true"
                 />
                 <div className="text-[10px] text-[#7FD4D0] mt-1 truncate">
-                  <a href="https://soundcloud.com/joemarsala" target="_blank" rel="noreferrer" className="hover:underline">Joe Marsala</a>
+                  <a href="https://soundcloud.com/markronson" target="_blank" rel="noreferrer" className="hover:underline">Mark Ronson</a>
                   {' · '}
-                  <a href="https://soundcloud.com/joemarsala/gotta-be-this-or-that-original" target="_blank" rel="noreferrer" className="hover:underline">Gotta Be This or That (Original)</a>
+                  <a href="https://soundcloud.com/markronson/suzanne" target="_blank" rel="noreferrer" className="hover:underline">Suzanne</a>
                 </div>
               </div>
               {logoMusicMinimized && (

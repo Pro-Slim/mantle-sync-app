@@ -6,10 +6,11 @@ interface LoginAnimationProps {
   onComplete: () => void;
 }
 
+const TOTAL_DURATION_MS = 3000;
+
 const LoginAnimation: React.FC<LoginAnimationProps> = ({ onComplete }) => {
   useEffect(() => {
-    // Complete animation after total duration
-    const timer = setTimeout(onComplete, 3000);
+    const timer = setTimeout(onComplete, TOTAL_DURATION_MS);
     return () => clearTimeout(timer);
   }, [onComplete]);
 
@@ -17,8 +18,6 @@ const LoginAnimation: React.FC<LoginAnimationProps> = ({ onComplete }) => {
     <motion.div
       className="fixed inset-0 bg-black overflow-hidden"
       initial={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.6, delay: 2.4 }}
     >
       {/* Background with cyberpunk effect */}
       <div className="absolute inset-0 bg-gradient-to-br from-[#050D20] via-[#0a1628] to-[#030407]" />
