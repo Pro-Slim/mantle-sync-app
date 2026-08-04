@@ -1012,18 +1012,20 @@ const Dashboard: React.FC = () => {
         title={sidebarVisible ? 'Hide the calendar' : 'Show the calendar'}
       >
         <span className="tray-handle-arrow" aria-hidden="true">›</span>
-        <span className="text-lg leading-none" aria-hidden="true">📅</span>
       </button>
 
-      {/* Main Content */}
-      <div className="flex flex-1 overflow-hidden relative z-10">
-        {/* Calendar curtain: always mounted, fixed off-canvas to the left and
-            drawn in over the timeline rather than pushing its layout */}
-        <aside
-          id="calendar-tray"
-          aria-hidden={!sidebarVisible}
-          className={`calendar-tray mantle-frosted p-6 flex flex-col ${!sidebarVisible ? 'tray-collapsed' : ''}`}
-        >
+      {/* Calendar curtain: always mounted, fixed off-canvas to the left and
+          drawn in over the timeline rather than pushing its layout. Kept as a
+          root-level sibling of Main Content (not nested inside it) so its own
+          z-30 competes directly against later root-level overlays — like the
+          bottom event-details panel — instead of being trapped inside Main
+          Content's z-10 stacking context, where it would lose to any later
+          sibling regardless of its own z-index. */}
+      <aside
+        id="calendar-tray"
+        aria-hidden={!sidebarVisible}
+        className={`calendar-tray mantle-frosted p-6 flex flex-col ${!sidebarVisible ? 'tray-collapsed' : ''}`}
+      >
             {/* Tray heading with its own collapse chevron, alongside the pull tab */}
             <div className="flex justify-between items-center mb-4">
               <h2 className="font-bold text-white flex items-center gap-2">
@@ -1176,8 +1178,10 @@ const Dashboard: React.FC = () => {
                 className="hidden"
               />
             </div>
-        </aside>
+      </aside>
 
+      {/* Main Content */}
+      <div className="flex flex-1 overflow-hidden relative z-10">
         {/* Main Timeline Area */}
         <main className="flex-1 overflow-hidden flex flex-col relative">
           <div style={{ height: `${timelineHeight}px`, overflow: 'hidden' }} className="relative mantle-frosted-light border-b border-[rgba(101,179,174,0.1)]">
