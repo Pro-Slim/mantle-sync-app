@@ -175,3 +175,65 @@ svg text {
               0 0 4px rgba(101, 179, 174, 0.4),
               inset 0 2px 4px rgba(101, 179, 174, 0.15);
 }
+
+/* ---------- calendar tray curtain ---------- */
+/* A curtain hangs from under the header (measured into --calendar-header-h by
+   Dashboard's ResizeObserver) down to the foot of the window, and slides in
+   over the timeline from the left edge, with a pull tab riding on its
+   trailing edge — same mechanism as ProPrice's cart/dues curtains, mirrored
+   to the left and re-skinned in Mantle teal. */
+:root { --calendar-tray-w: min(340px, 92vw); }
+
+.calendar-tray {
+  position: fixed; left: 0; top: var(--calendar-header-h, 88px); bottom: 0; z-index: 30;
+  width: var(--calendar-tray-w); overflow-y: auto; overscroll-behavior: contain;
+  border-radius: 0 12px 12px 0;
+  transform: translateX(0);
+  box-shadow: 10px 0 30px rgba(0, 0, 0, 0.35);
+  transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.32s ease, visibility 0s;
+}
+
+.calendar-tray.tray-collapsed {
+  transform: translateX(-100%);
+  box-shadow: none;
+  visibility: hidden;
+  transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.32s ease, visibility 0s 0.32s;
+}
+
+/* The pull always wears the calendar's teal, open or shut, so a forgotten
+   curtain still quietly invites a click rather than blending into the edge. */
+.calendar-tray-handle {
+  position: fixed; left: 0; top: 50%; z-index: 31;
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  padding: 12px 7px; cursor: pointer;
+  background: linear-gradient(180deg, var(--mantle-teal), var(--mantle-teal-dark));
+  color: #050D20;
+  border: 1px solid rgba(101, 179, 174, 0.45); border-left: none;
+  border-radius: 0 12px 12px 0;
+  box-shadow: 3px 0 16px rgba(101, 179, 174, 0.22);
+  transform: translate(0, -50%);
+  transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1), background 0.15s ease, box-shadow 0.15s ease;
+}
+
+.calendar-tray-handle:not(.tray-collapsed-handle) {
+  transform: translate(var(--calendar-tray-w), -50%);
+}
+
+.calendar-tray-handle:hover {
+  background: linear-gradient(180deg, var(--mantle-teal-dark), var(--mantle-teal));
+  box-shadow: 4px 0 24px rgba(101, 179, 174, 0.42);
+}
+
+.calendar-tray-handle .tray-handle-arrow {
+  font-size: 14px; line-height: 1; transition: transform 0.32s ease;
+}
+
+.calendar-tray-handle:not(.tray-collapsed-handle) .tray-handle-arrow {
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .calendar-tray, .calendar-tray-handle, .calendar-tray-handle .tray-handle-arrow {
+    transition: none;
+  }
+}

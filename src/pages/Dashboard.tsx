@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import Timeline, { BASE_TIMELINE_WIDTH, TIMELINE_PADDING } from '../components/Timeline/Timeline';
+import WeekView from '../components/Timeline/WeekView';
 import CalendarWidget from '../components/Calendar/CalendarWidget';
+import DayCampaignsModal from '../components/Calendar/DayCampaignsModal';
 import EventCountdownClock from '../components/EventCountdownClock';
 import AuthModal from '../components/AuthModal';
 import SettingsIcon from '../components/Icons/SettingsIcon';
@@ -13,7 +15,7 @@ import { usePresence } from '../hooks/usePresence';
 import { isAdmin } from '../constants/admins';
 import { Event, CalendarReminder } from '../types';
 import { parseCSV, csvToEvents, eventsToCSV } from '../utils/csvImporter';
-import { getPositionFromDate, toDateInputValue, parseDateInputValue, formatDate } from '../utils/dateHelpers';
+import { getPositionFromDate, toDateInputValue, parseDateInputValue, formatDate, isEventActiveOn } from '../utils/dateHelpers';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../utils/supabaseClient';
 import { useEventStore } from '../stores/eventStore';
@@ -56,11 +58,15 @@ const Dashboard: React.FC = () => {
   const timelineResizeRef = useRef<HTMLDivElement>(null);
   const resizeStartYRef = useRef<number>(0);
   const timelineRef = useRef<HTMLDivElement>(null);
+  const headerRef = useRef<HTMLElement>(null);
   const settingsRef = useRef<HTMLDivElement>(null);
   const [settingsOpen, setSettingsOpen] = React.useState(false);
   const [settingsSpinning, setSettingsSpinning] = React.useState(false);
   const [logoMusicOpen, setLogoMusicOpen] = React.useState(false);
   const [logoMusicMinimized, setLogoMusicMinimized] = React.useState(false);
+  const [mainView, setMainView] = React.useState<'week' | 'timeline'>('week');
+  const [weekAnchor, setWeekAnchor] = React.useState(new Date());
+  const [selectedCampaignDay, setSelectedCampaignDay] = React.useState<Date | null>(null);
   const [reminderModalOpen, setReminderModalOpen] = React.useState(false);
   const [selectedReminderDate, setSelectedReminderDate] = React.useState<Date | null>(null);
   const [reminderTitle, setReminderTitle] = React.useState('');
@@ -94,6 +100,13 @@ const Dashboard: React.FC = () => {
     announcementPending: events.filter(e => e.winnerAnnouncementDate && e.winnerAnnouncementDate >= new Date()).length,
     announcementDelayed: events.filter(e => e.winnerAnnouncementDate && e.winnerAnnouncementDate < new Date()).length,
   }), [events]);
+
+  const campaignsForSelectedDay = useMemo(() => {
+    if (!selectedCampaignDay) return [];
+    return events
+      .filter(event => isEventActiveOn(event, selectedCampaignDay))
+      .sort((a, b) => a.startDate.getTime() - b.startDate.getTime() || a.title.localeCompare(b.title));
+  }, [events, selectedCampaignDay]);
 
   // Load per-event draft fields whenever the selected table event changes,
   // so edits from a previous event don't leak into the newly selected one.
@@ -154,6 +167,33 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  // Measures the header's height into a CSS var so the calendar curtain can
+  // hang from just beneath it (position: fixed can't read flow layout on its
+  // own). Off to the next frame rather than writing inside the observer's own
+  // pass, since the header's height feeds the curtain's top offset and doing
+  // it synchronously is what makes the browser warn about undelivered
+  // resize-observer notifications.
+  useEffect(() => {
+    const header = headerRef.current;
+    if (!header) return;
+    let pending = 0;
+    const writeHeaderHeight = () => {
+      const h = header.getBoundingClientRect().height;
+      if (h) document.documentElement.style.setProperty('--calendar-header-h', `${h}px`);
+    };
+    const measure = () => {
+      cancelAnimationFrame(pending);
+      pending = requestAnimationFrame(writeHeaderHeight);
+    };
+    const observer = new ResizeObserver(measure);
+    observer.observe(header);
+    writeHeaderHeight();
+    return () => {
+      cancelAnimationFrame(pending);
+      observer.disconnect();
+    };
+  }, []);
+
   // Close the Settings dropdown when clicking outside it
   useEffect(() => {
     if (!settingsOpen) return;
@@ -173,6 +213,14 @@ const Dashboard: React.FC = () => {
     }
   }, [events.length]);
 
+  // Switching back to the horizontal timeline lands on the week the user was
+  // just looking at, rather than wherever the timeline was last scrolled to.
+  useEffect(() => {
+    if (mainView === 'timeline') {
+      setTimeout(() => scrollTimelineToDate(weekAnchor, { smooth: true }), 100);
+    }
+  }, [mainView]);
+
   // Load any pending queue count left over from a previous session
   useEffect(() => {
     offlineQueue.size().then((count) => {
@@ -190,13 +238,25 @@ const Dashboard: React.FC = () => {
 
 
   
+  // In week mode the sidebar's month grid acts as a week picker; on the
+  // horizontal timeline it keeps scrolling to the date as it always has.
   const handleCalendarDateNavigate = (date: Date) => {
-    scrollTimelineToDate(date, { smooth: true, sound: true });
+    if (mainView === 'week') {
+      setWeekAnchor(date);
+      playWhooshSound();
+    } else {
+      scrollTimelineToDate(date, { smooth: true, sound: true });
+    }
   };
 
   const handleCalendarDateSelect = (date: Date) => {
     setSelectedReminderDate(date);
     setReminderModalOpen(true);
+  };
+
+  const handleCalendarDayCampaigns = (date: Date) => {
+    setWeekAnchor(date);
+    setSelectedCampaignDay(date);
   };
 
     const handleCreateReminder = async () => {
@@ -510,7 +570,7 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* Header */}
-      <header className="mantle-frosted border-b border-[rgba(101,179,174,0.2)] backdrop-blur-md relative z-20">
+      <header ref={headerRef} className="mantle-frosted border-b border-[rgba(101,179,174,0.2)] backdrop-blur-md relative z-20">
         <div className="max-w-full px-6 py-4 flex justify-between items-center gap-6">
           {/* Left Section: Mantle Logo & Title */}
           <div className="flex gap-4 items-center flex-1">
@@ -531,20 +591,6 @@ const Dashboard: React.FC = () => {
                 ⚠️ {pendingCount} pending
               </div>
             )}
-
-            <button
-              onClick={() => setSidebarVisible(!sidebarVisible)}
-              className="flex-shrink-0 w-12 h-12 rounded-lg mantle-frosted-light flex items-center justify-center text-white transition-all hover:scale-105 hover:mantle-glow-pulse group relative"
-              title={sidebarVisible ? 'Hide Calendar' : 'Show Calendar'}
-            >
-              <svg viewBox="0 0 24 24" className="w-6 h-6 text-[#65B3AE] group-hover:text-[#7FD4D0] transition">
-                <circle cx="12" cy="12" r="3" fill="currentColor"/>
-                <circle cx="12" cy="5" r="2" fill="currentColor" opacity="0.7"/>
-                <circle cx="19" cy="12" r="2" fill="currentColor" opacity="0.7"/>
-                <circle cx="12" cy="19" r="2" fill="currentColor" opacity="0.7"/>
-                <circle cx="5" cy="12" r="2" fill="currentColor" opacity="0.7"/>
-              </svg>
-            </button>
 
             {/* Title */}
             <div className="flex-shrink-0 flex items-center gap-3">
@@ -905,51 +951,102 @@ const Dashboard: React.FC = () => {
             {/* Divider */}
             <div className="w-px h-6 bg-gradient-to-b from-[#65B3AE] via-[#65B3AE] to-transparent opacity-20" />
 
-            {/* Zoom Controls Group */}
-            <div className="flex gap-2 items-center">
-              <button
-                onClick={handleZoomOut}
-                title="Zoom Out (−) | Ctrl+Scroll Down"
-                className="px-3 py-2 rounded-lg mantle-frosted-light text-[#65B3AE] font-semibold transition-all hover:bg-[#65B3AE] hover:bg-opacity-20"
-              >
-                −
-              </button>
-              <button
-                onClick={handleCenter}
-                title="Center on Today"
-                className="px-3 py-2 rounded-lg mantle-frosted-light text-[#65B3AE] font-semibold transition-all hover:bg-[#65B3AE] hover:bg-opacity-20 mantle-glow-pulse"
-              >
-                ⊙
-              </button>
-              <button
-                onClick={handleZoomIn}
-                title="Zoom In (+) | Ctrl+Scroll Up"
-                className="px-3 py-2 rounded-lg mantle-frosted-light text-[#65B3AE] font-semibold transition-all hover:bg-[#65B3AE] hover:bg-opacity-20"
-              >
-                +
-              </button>
+            {/* Main View Toggle */}
+            <div data-tutorial="main-view-toggle" className="flex gap-1 p-0.5 rounded-lg bg-[rgba(101,179,174,0.08)]">
+              {([
+                { mode: 'week' as const, label: 'Week', hint: 'Weekly layout: active campaigns per day' },
+                { mode: 'timeline' as const, label: 'Timeline', hint: 'Horizontal timeline across the year' },
+              ]).map(({ mode, label, hint }) => (
+                <button
+                  key={mode}
+                  onClick={() => setMainView(mode)}
+                  title={hint}
+                  className={`px-3 py-1.5 rounded-md text-sm font-semibold transition-all ${
+                    mainView === mode
+                      ? 'bg-[#65B3AE] text-[#050D20]'
+                      : 'text-[#7FD4D0] hover:bg-[rgba(101,179,174,0.15)]'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
+
+            {/* Zoom Controls Group (timeline only) */}
+            {mainView === 'timeline' && (
+              <div className="flex gap-2 items-center">
+                <button
+                  onClick={handleZoomOut}
+                  title="Zoom Out (−) | Ctrl+Scroll Down"
+                  className="px-3 py-2 rounded-lg mantle-frosted-light text-[#65B3AE] font-semibold transition-all hover:bg-[#65B3AE] hover:bg-opacity-20"
+                >
+                  −
+                </button>
+                <button
+                  onClick={handleCenter}
+                  title="Center on Today"
+                  className="px-3 py-2 rounded-lg mantle-frosted-light text-[#65B3AE] font-semibold transition-all hover:bg-[#65B3AE] hover:bg-opacity-20 mantle-glow-pulse"
+                >
+                  ⊙
+                </button>
+                <button
+                  onClick={handleZoomIn}
+                  title="Zoom In (+) | Ctrl+Scroll Up"
+                  className="px-3 py-2 rounded-lg mantle-frosted-light text-[#65B3AE] font-semibold transition-all hover:bg-[#65B3AE] hover:bg-opacity-20"
+                >
+                  +
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </header>
 
+      {/* Calendar pull tab: rides the curtain's trailing edge, same mechanism
+          as ProPrice's cart/dues handles, mirrored to the left */}
+      <button
+        onClick={() => setSidebarVisible(!sidebarVisible)}
+        className={`calendar-tray-handle ${!sidebarVisible ? 'tray-collapsed-handle' : ''}`}
+        aria-expanded={sidebarVisible}
+        aria-controls="calendar-tray"
+        title={sidebarVisible ? 'Hide the calendar' : 'Show the calendar'}
+      >
+        <span className="tray-handle-arrow" aria-hidden="true">›</span>
+        <span className="text-lg leading-none" aria-hidden="true">📅</span>
+      </button>
+
       {/* Main Content */}
       <div className="flex flex-1 overflow-hidden relative z-10">
-        {/* Sidebar with Calendar */}
-        {sidebarVisible && (
-          <aside className="w-80 mantle-frosted border-r border-[rgba(101,179,174,0.2)] p-6 overflow-y-auto flex flex-col fixed lg:relative inset-y-0 left-0 lg:inset-auto z-30 lg:z-auto transition-all">
-            {/* Sidebar Close Button */}
-            <div className="flex justify-end mb-4">
+        {/* Calendar curtain: always mounted, fixed off-canvas to the left and
+            drawn in over the timeline rather than pushing its layout */}
+        <aside
+          id="calendar-tray"
+          aria-hidden={!sidebarVisible}
+          className={`calendar-tray mantle-frosted p-6 flex flex-col ${!sidebarVisible ? 'tray-collapsed' : ''}`}
+        >
+            {/* Tray heading with its own collapse chevron, alongside the pull tab */}
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="font-bold text-white flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-[#65B3AE]" />
+                Calendar
+              </h2>
               <button
                 onClick={() => setSidebarVisible(false)}
-                className="w-8 h-8 flex items-center justify-center rounded-lg bg-white bg-opacity-5 text-[#65B3AE] hover:bg-opacity-10 transition-all"
-                title="Close Calendar"
+                className="w-7 h-7 flex items-center justify-center rounded-lg text-[#65B3AE] hover:bg-[rgba(101,179,174,0.15)] transition-all font-bold"
+                title="Hide the calendar"
               >
-                ✕
+                ‹
               </button>
             </div>
 
-            <CalendarWidget onDateSelect={handleCalendarDateNavigate} onDateDoubleClick={handleCalendarDateSelect} reminders={reminders} onDeleteReminder={handleDeleteReminder} />
+            <CalendarWidget
+              onDateSelect={handleCalendarDateNavigate}
+              onDateDoubleClick={handleCalendarDateSelect}
+              onDayCampaignsSelect={handleCalendarDayCampaigns}
+              events={events}
+              reminders={reminders}
+              onDeleteReminder={handleDeleteReminder}
+            />
 
             {/* Quick Stats */}
             <div className="mt-8 p-4 rounded-lg bg-white bg-opacity-5 border border-[rgba(101,179,174,0.1)]">
@@ -1079,36 +1176,40 @@ const Dashboard: React.FC = () => {
                 className="hidden"
               />
             </div>
-          </aside>
-        )}
-
-        {/* Overlay for mobile when sidebar is visible */}
-        {sidebarVisible && (
-          <div
-            className="fixed inset-0 bg-black bg-opacity-70 backdrop-blur-sm lg:hidden z-20"
-            onClick={() => setSidebarVisible(false)}
-          />
-        )}
+        </aside>
 
         {/* Main Timeline Area */}
         <main className="flex-1 overflow-hidden flex flex-col relative">
           <div style={{ height: `${timelineHeight}px`, overflow: 'hidden' }} className="relative mantle-frosted-light border-b border-[rgba(101,179,174,0.1)]">
-            <Timeline
-              events={events}
-              onEventSelect={(event) => {
-                if (event && detailsViewMode === 'table') {
+            {mainView === 'week' ? (
+              <WeekView
+                events={events}
+                anchorDate={weekAnchor}
+                onAnchorDateChange={setWeekAnchor}
+                onDaySelect={handleCalendarDayCampaigns}
+                onEventSelect={(event) => {
+                  setDetailsViewMode('table');
                   setSelectedEventForTable(event);
-                } else if (!event) {
-                  setSelectedEventForTable(null);
-                }
-              }}
-              onEventUpdate={handleEventUpdate}
-              onEventDelete={handleEventDelete}
-              onAddCountdown={handleAddCountdown}
-              hoverEnabled={hoverEnabled}
-              zoomLevel={zoomLevel}
-              timelineRef={timelineRef}
-            />
+                }}
+              />
+            ) : (
+              <Timeline
+                events={events}
+                onEventSelect={(event) => {
+                  if (event && detailsViewMode === 'table') {
+                    setSelectedEventForTable(event);
+                  } else if (!event) {
+                    setSelectedEventForTable(null);
+                  }
+                }}
+                onEventUpdate={handleEventUpdate}
+                onEventDelete={handleEventDelete}
+                onAddCountdown={handleAddCountdown}
+                hoverEnabled={hoverEnabled}
+                zoomLevel={zoomLevel}
+                timelineRef={timelineRef}
+              />
+            )}
           </div>
 
           {/* Resize Handle */}
@@ -1155,10 +1256,6 @@ const Dashboard: React.FC = () => {
           <div className="px-4">
             <table className="w-full text-sm">
               <tbody className="divide-y divide-[rgba(101,179,174,0.2)]">
-                <tr className="hover:bg-[rgba(101,179,174,0.05)] transition">
-                  <td className="px-3 py-2 text-[#65B3AE] font-semibold">ID</td>
-                  <td className="px-3 py-2 text-[#7FD4D0]">{selectedEventForTable.id}</td>
-                </tr>
                 <tr className="hover:bg-[rgba(101,179,174,0.05)] transition">
                   <td className="px-3 py-2 text-[#65B3AE] font-semibold">Title</td>
                   <td className="px-3 py-2 text-[#7FD4D0]">{selectedEventForTable.title}</td>
@@ -1360,6 +1457,30 @@ const Dashboard: React.FC = () => {
         <AddEventModal
           onClose={() => setShowAddModal(false)}
           onAdd={handleAddEvent}
+        />
+      )}
+
+      {/* Day Campaigns Modal (weekly calendar → click a day) */}
+      {selectedCampaignDay && (
+        <DayCampaignsModal
+          date={selectedCampaignDay}
+          campaigns={campaignsForSelectedDay}
+          onClose={() => setSelectedCampaignDay(null)}
+          onGoToTimeline={(date) => {
+            setWeekAnchor(date);
+            setSelectedCampaignDay(null);
+            if (mainView === 'timeline') {
+              scrollTimelineToDate(date, { smooth: true, sound: true });
+            } else {
+              setMainView('timeline');
+              playWhooshSound();
+            }
+          }}
+          onViewDetails={(campaign) => {
+            setDetailsViewMode('table');
+            setSelectedEventForTable(campaign);
+            setSelectedCampaignDay(null);
+          }}
         />
       )}
 
