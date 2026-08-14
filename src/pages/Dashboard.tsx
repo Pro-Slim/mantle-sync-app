@@ -34,6 +34,148 @@ interface CountdownClockState {
   type: 'endDate' | 'rewardDelivery';
 }
 
+// One form shape, shared by the Add modal and the details panel's
+// Edit / Review mode. Two copies of this mapping is how a field ends up
+// editable in one place and silently dropped in the other.
+interface EventFormDraft {
+  title: string;
+  category: Event['category'];
+  startDate: string;
+  endDate: string;
+  type: Event['type'];
+  description: string;
+  requirements: string;
+  requirementsDetails: string;
+  resources: string;
+  applicationLink: string;
+  xPostLink: string;
+  winnerCriteria: string;
+  winnerCriteriaDetails: string;
+  winnerAnnouncementDate: string;
+  notionLink: string;
+  rewardAmount: string;
+  rewardCurrency: string;
+  defaultDeliveryDate: string;
+  realizedDeliveryDate: string;
+  rewardStatus: 'pending' | 'delayed' | 'delivered';
+  winnersPine: string;
+  remarks: string;
+  tags: string;
+  isFavorite: boolean;
+}
+
+// The draft keys holding plain text, so the edit panel's input helpers can take
+// a field name instead of each of twenty fields carrying its own onChange.
+type EventFormTextKey = {
+  [K in keyof EventFormDraft]: EventFormDraft[K] extends string ? K : never;
+}[keyof EventFormDraft];
+
+const EVENT_CATEGORIES: Event['category'][] = ['mantle', 'byreal', 'solana', 'meth', 'xeyit', 'other'];
+const EVENT_TYPES: Event['type'][] = ['bounty', 'hackathon', 'news', 'campaign', 'featured'];
+const REWARD_CURRENCIES = ['MNT', 'BYREAL', 'SOL', 'ETH', 'USDC', 'USD'];
+const REWARD_STATUSES: EventFormDraft['rewardStatus'][] = ['pending', 'delayed', 'delivered'];
+
+const emptyEventDraft = (): EventFormDraft => ({
+  title: '',
+  category: 'mantle',
+  startDate: toDateInputValue(new Date()),
+  endDate: '',
+  type: 'news',
+  description: '',
+  requirements: '',
+  requirementsDetails: '',
+  resources: '',
+  applicationLink: '',
+  xPostLink: '',
+  winnerCriteria: '',
+  winnerCriteriaDetails: '',
+  winnerAnnouncementDate: '',
+  notionLink: '',
+  rewardAmount: '',
+  rewardCurrency: 'MNT',
+  defaultDeliveryDate: '',
+  realizedDeliveryDate: '',
+  rewardStatus: 'pending',
+  winnersPine: '',
+  remarks: '',
+  tags: '',
+  isFavorite: false,
+});
+
+const eventToDraft = (event: Event): EventFormDraft => ({
+  title: event.title,
+  category: event.category,
+  startDate: toDateInputValue(event.startDate),
+  endDate: event.endDate ? toDateInputValue(event.endDate) : '',
+  type: event.type,
+  description: event.description || '',
+  requirements: event.requirements || '',
+  requirementsDetails: event.requirementsDetails || '',
+  resources: event.resources || '',
+  applicationLink: event.applicationLink || '',
+  xPostLink: event.xPostLink || '',
+  winnerCriteria: event.winnerCriteria || '',
+  winnerCriteriaDetails: event.winnerCriteriaDetails || '',
+  winnerAnnouncementDate: event.winnerAnnouncementDate ? toDateInputValue(event.winnerAnnouncementDate) : '',
+  notionLink: event.notionLink || '',
+  rewardAmount: event.rewards?.amount || '',
+  rewardCurrency: event.rewards?.currency || 'MNT',
+  defaultDeliveryDate: event.rewards?.defaultDeliveryDate ? toDateInputValue(event.rewards.defaultDeliveryDate) : '',
+  realizedDeliveryDate: event.rewards?.realizedDeliveryDate ? toDateInputValue(event.rewards.realizedDeliveryDate) : '',
+  rewardStatus: event.rewards?.status || 'pending',
+  winnersPine: event.winnersPine || '',
+  remarks: event.remarks || '',
+  tags: event.tags?.join(', ') || '',
+  isFavorite: !!event.isFavorite,
+});
+
+// An empty optional field becomes undefined, never '', so the store writes a
+// real null and the cleared value actually survives a reload.
+const draftToEvent = (draft: EventFormDraft, id: string): Event => ({
+  id,
+  title: draft.title.trim(),
+  category: draft.category,
+  startDate: parseDateInputValue(draft.startDate),
+  endDate: draft.endDate ? parseDateInputValue(draft.endDate) : undefined,
+  type: draft.type,
+  description: draft.description,
+  requirements: draft.requirements || undefined,
+  requirementsDetails: draft.requirementsDetails || undefined,
+  resources: draft.resources || undefined,
+  applicationLink: draft.applicationLink || undefined,
+  xPostLink: draft.xPostLink || undefined,
+  winnerCriteria: draft.winnerCriteria || undefined,
+  winnerCriteriaDetails: draft.winnerCriteriaDetails || undefined,
+  winnerAnnouncementDate: draft.winnerAnnouncementDate ? parseDateInputValue(draft.winnerAnnouncementDate) : undefined,
+  notionLink: draft.notionLink || undefined,
+  // A reward is an amount AND a date: half of one reads back as a reward due
+  // on 1 Jan 1970, which is worse than no reward at all.
+  rewards: draft.rewardAmount && draft.defaultDeliveryDate ? {
+    amount: draft.rewardAmount,
+    currency: draft.rewardCurrency,
+    defaultDeliveryDate: parseDateInputValue(draft.defaultDeliveryDate),
+    realizedDeliveryDate: draft.realizedDeliveryDate ? parseDateInputValue(draft.realizedDeliveryDate) : undefined,
+    status: draft.rewardStatus,
+  } : undefined,
+  tags: draft.tags.split(',').map((tag) => tag.trim()).filter(Boolean),
+  isFavorite: draft.isFavorite,
+  winnersPine: draft.winnersPine || undefined,
+  remarks: draft.remarks || undefined,
+});
+
+// Returns the reason a draft can't be saved, or null when it can.
+const validateEventDraft = (draft: EventFormDraft): string | null => {
+  if (!draft.title.trim()) return 'Title is required.';
+  if (!draft.startDate) return 'Start date is required.';
+  if (draft.endDate && parseDateInputValue(draft.endDate) < parseDateInputValue(draft.startDate)) {
+    return 'End date cannot be before the start date.';
+  }
+  if (draft.rewardAmount && !draft.defaultDeliveryDate) {
+    return 'A reward amount needs a default delivery date.';
+  }
+  return null;
+};
+
 const Dashboard: React.FC = () => {
   const { user, session, userApprovalStatus, signOut } = useAuth();
   const [showAuthModal, setShowAuthModal] = React.useState(!session);
@@ -83,13 +225,14 @@ const Dashboard: React.FC = () => {
       return next;
     });
   };
-  type TableDraftField = 'requirementsDetails' | 'winnerCriteriaDetails' | 'winnersPine' | 'remarks';
-  const [tableDrafts, setTableDrafts] = React.useState<Record<TableDraftField, string>>({
-    requirementsDetails: '',
-    winnerCriteriaDetails: '',
-    winnersPine: '',
-    remarks: '',
-  });
+  // Edit / Review mode for the details panel. The draft is the ONLY way the
+  // panel writes: four fields used to save on blur while the rest were plain
+  // text, which meant two mechanisms editing one record and a screen where you
+  // couldn't tell what was editable without clicking it.
+  const [tableEditMode, setTableEditMode] = React.useState(false);
+  const [eventDraft, setEventDraft] = React.useState<EventFormDraft | null>(null);
+  const [editError, setEditError] = React.useState<string | null>(null);
+  const [savingEdit, setSavingEdit] = React.useState(false);
   const isOnline = useNetworkStatus();
   const { pendingCount, isSyncing } = useSyncStatusStore();
 
@@ -108,23 +251,122 @@ const Dashboard: React.FC = () => {
       .sort((a, b) => a.startDate.getTime() - b.startDate.getTime() || a.title.localeCompare(b.title));
   }, [events, selectedCampaignDay]);
 
-  // Load per-event draft fields whenever the selected table event changes,
-  // so edits from a previous event don't leak into the newly selected one.
+  // Leave edit mode whenever a DIFFERENT event is selected, so a half-typed
+  // draft can't be saved onto the event that replaced it. Keyed on the id, not
+  // the object, because saving replaces the object with the same id.
   useEffect(() => {
-    setTableDrafts({
-      requirementsDetails: selectedEventForTable?.requirementsDetails || '',
-      winnerCriteriaDetails: selectedEventForTable?.winnerCriteriaDetails || '',
-      winnersPine: selectedEventForTable?.winnersPine || '',
-      remarks: selectedEventForTable?.remarks || '',
-    });
+    setTableEditMode(false);
+    setEventDraft(null);
+    setEditError(null);
   }, [selectedEventForTable?.id]);
 
-  const commitTableDraft = (field: TableDraftField) => {
-    const draftValue = tableDrafts[field];
-    if (draftValue !== (selectedEventForTable?.[field] || '')) {
-      updateSelectedEventField({ [field]: draftValue || undefined });
-    }
+  const startTableEdit = () => {
+    if (!selectedEventForTable) return;
+    setEventDraft(eventToDraft(selectedEventForTable));
+    setEditError(null);
+    setTableEditMode(true);
   };
+
+  const cancelTableEdit = () => {
+    setTableEditMode(false);
+    setEventDraft(null);
+    setEditError(null);
+  };
+
+  const patchEventDraft = (patch: Partial<EventFormDraft>) => {
+    setEventDraft((prev) => (prev ? { ...prev, ...patch } : prev));
+  };
+
+  const saveTableEdit = async () => {
+    if (!selectedEventForTable || !eventDraft) return;
+
+    const problem = validateEventDraft(eventDraft);
+    if (problem) {
+      setEditError(problem);
+      return;
+    }
+
+    setSavingEdit(true);
+    const saved = await handleEventUpdate(draftToEvent(eventDraft, selectedEventForTable.id));
+    setSavingEdit(false);
+
+    // A failed write is rolled back in the store and queued for later, so the
+    // panel must not close claiming it saved. Keep the draft on screen — it is
+    // the only copy of what was typed.
+    if (!saved) {
+      setEditError('Could not save. Your changes are queued and will sync once the connection is back — leave this open or copy them somewhere safe.');
+      return;
+    }
+
+    setSelectedEventForTable(saved);
+    setTableEditMode(false);
+    setEventDraft(null);
+    setEditError(null);
+  };
+
+  // One row renderer for the details table: the same label cell either way, and
+  // the value cell swaps to its control in edit mode. Keeping view and edit in
+  // one call is what stops the two lists of fields drifting apart.
+  const editInputClass =
+    'w-full bg-[rgba(101,179,174,0.1)] border border-[rgba(101,179,174,0.3)] rounded px-2 py-1 text-sm text-white placeholder-[rgba(101,179,174,0.4)] focus:outline-none focus:border-[#65B3AE] transition';
+
+  const detailRow = (label: React.ReactNode, view: React.ReactNode, edit?: React.ReactNode) => (
+    <tr className="hover:bg-[rgba(101,179,174,0.05)] transition align-top">
+      <td className="px-3 py-2 text-[#65B3AE] font-semibold whitespace-nowrap">{label}</td>
+      <td className="px-3 py-2 text-[#7FD4D0]">{tableEditMode && edit !== undefined ? edit : view}</td>
+    </tr>
+  );
+
+  const draftText = (key: EventFormTextKey, placeholder = '') => (
+    <input
+      type="text"
+      value={eventDraft?.[key] ?? ''}
+      onChange={(e) => patchEventDraft({ [key]: e.target.value } as Partial<EventFormDraft>)}
+      placeholder={placeholder}
+      className={editInputClass}
+    />
+  );
+
+  const draftArea = (key: EventFormTextKey, placeholder = '') => (
+    <textarea
+      value={eventDraft?.[key] ?? ''}
+      onChange={(e) => patchEventDraft({ [key]: e.target.value } as Partial<EventFormDraft>)}
+      placeholder={placeholder}
+      className={`${editInputClass} h-16 resize-none`}
+    />
+  );
+
+  const draftDate = (key: EventFormTextKey) => (
+    <input
+      type="date"
+      value={eventDraft?.[key] ?? ''}
+      onChange={(e) => patchEventDraft({ [key]: e.target.value } as Partial<EventFormDraft>)}
+      className={editInputClass}
+    />
+  );
+
+  const draftSelect = <T extends string>(value: T, options: readonly T[], onPick: (next: T) => void) => (
+    <select
+      value={value}
+      onChange={(e) => onPick(e.target.value as T)}
+      className={`${editInputClass} capitalize`}
+    >
+      {options.map((option) => (
+        <option key={option} value={option} className="bg-[#0A1628] capitalize">
+          {option}
+        </option>
+      ))}
+    </select>
+  );
+
+  const externalLink = (href?: string) =>
+    href ? (
+      <a href={href} target="_blank" rel="noopener noreferrer" className="text-[#65B3AE] hover:underline break-all">
+        {href}
+      </a>
+    ) : (
+      '—'
+    );
 
   // Fetch data when component mounts or user changes
   useEffect(() => {
@@ -286,23 +528,14 @@ const Dashboard: React.FC = () => {
   };
 
 
+    // Returns the stored event, or null when the write didn't land — the store
+    // rolls its optimistic copy back in that case, so a caller that assumed
+    // success would leave the screen showing values the database never took.
     const handleEventUpdate = async (updatedEvent: Event) => {
-    if (!user?.id) return;
-    await useEventStore.getState().updateEvent(updatedEvent.id, updatedEvent);
+    if (!user?.id) return null;
+    const saved = await useEventStore.getState().updateEvent(updatedEvent.id, updatedEvent);
     await addLog('update_event', `Updated: ${updatedEvent.title}`);
-  };
-
-  // Merges a field change into the freshest selectedEventForTable via the
-  // functional setState form, so back-to-back blurs on different fields
-  // (e.g. tabbing Requirements -> Winners Pine) can't clobber each other
-  // with a stale closure of selectedEventForTable.
-  const updateSelectedEventField = (fieldUpdate: Partial<Event>) => {
-    setSelectedEventForTable(prev => {
-      if (!prev) return prev;
-      const updated = { ...prev, ...fieldUpdate };
-      handleEventUpdate(updated);
-      return updated;
-    });
+    return saved;
   };
 
 
@@ -658,7 +891,9 @@ const Dashboard: React.FC = () => {
           {/* Right Section: Control Buttons */}
           <div className="flex gap-3 items-center flex-shrink-0">
             {/* Online Users Indicator */}
-            <OnlineUsers onlineUsers={onlineUsers} loading={presenceLoading} />
+            <div data-tutorial="online-users">
+              <OnlineUsers onlineUsers={onlineUsers} loading={presenceLoading} />
+            </div>
 
             {/* Settings Menu Button */}
             <div ref={settingsRef} className="relative">
@@ -1005,6 +1240,7 @@ const Dashboard: React.FC = () => {
       {/* Calendar pull tab: rides the curtain's trailing edge, same mechanism
           as ProPrice's cart/dues handles, mirrored to the left */}
       <button
+        data-tutorial="calendar-tab"
         onClick={() => setSidebarVisible(!sidebarVisible)}
         className={`calendar-tray-handle ${!sidebarVisible ? 'tray-collapsed-handle' : ''}`}
         aria-expanded={sidebarVisible}
@@ -1051,7 +1287,7 @@ const Dashboard: React.FC = () => {
             />
 
             {/* Quick Stats */}
-            <div className="mt-8 p-4 rounded-lg bg-white bg-opacity-5 border border-[rgba(101,179,174,0.1)]">
+            <div data-tutorial="quick-stats" className="mt-8 p-4 rounded-lg bg-white bg-opacity-5 border border-[rgba(101,179,174,0.1)]">
               <button
                 onClick={() => setStatsExpanded(!statsExpanded)}
                 className="w-full font-bold text-white flex items-center justify-between gap-2"
@@ -1184,7 +1420,7 @@ const Dashboard: React.FC = () => {
       <div className="flex flex-1 overflow-hidden relative z-10">
         {/* Main Timeline Area */}
         <main className="flex-1 overflow-hidden flex flex-col relative">
-          <div style={{ height: `${timelineHeight}px`, overflow: 'hidden' }} className="relative mantle-frosted-light border-b border-[rgba(101,179,174,0.1)]">
+          <div data-tutorial="timeline-area" style={{ height: `${timelineHeight}px`, overflow: 'hidden' }} className="relative mantle-frosted-light border-b border-[rgba(101,179,174,0.1)]">
             {mainView === 'week' ? (
               <WeekView
                 events={events}
@@ -1218,6 +1454,7 @@ const Dashboard: React.FC = () => {
 
           {/* Resize Handle */}
           <div
+            data-tutorial="timeline-resize"
             ref={timelineResizeRef}
             onMouseDown={handleResizeStart}
             className="h-1 cursor-ns-resize transition-all bg-gradient-to-r from-transparent via-[#65B3AE] to-transparent opacity-30 hover:opacity-70 hover:shadow-lg hover:shadow-[#65B3AE]/50"
@@ -1235,21 +1472,44 @@ const Dashboard: React.FC = () => {
           <div className="sticky top-0 bg-gradient-to-b from-[#0A1628] to-transparent z-20 mb-4 px-4 pt-4 flex justify-between items-center">
             <div>
               <h3 className="text-lg font-bold text-[#7FD4D0]">{selectedEventForTable.title}</h3>
-              <p className="text-xs text-[rgba(101,179,174,0.6)] mt-1">Event Details</p>
+              <p className="text-xs text-[rgba(101,179,174,0.6)] mt-1">
+                {tableEditMode ? 'Editing — nothing is saved until you press Save' : 'Event Details'}
+              </p>
             </div>
-            <div className="flex gap-2 items-center">
+            <div data-tutorial="edit-review" className="flex gap-2 items-center">
+              {tableEditMode ? (
+                <>
+                  <button
+                    onClick={cancelTableEdit}
+                    disabled={savingEdit}
+                    className="px-3 py-2 rounded-lg text-sm font-semibold text-[rgba(255,255,255,0.6)] hover:bg-[rgba(255,255,255,0.1)] transition disabled:opacity-50"
+                    title="Discard changes"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={saveTableEdit}
+                    disabled={savingEdit}
+                    className="px-4 py-2 rounded-lg text-sm font-bold bg-[#65B3AE] text-[#050D20] hover:bg-[#7FD4D0] transition disabled:opacity-50"
+                    title="Save changes"
+                  >
+                    {savingEdit ? 'Saving…' : 'Save'}
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={startTableEdit}
+                  className="px-3 py-2 rounded-lg text-sm font-semibold text-[#65B3AE] hover:bg-[#65B3AE] hover:bg-opacity-20 transition"
+                  title="Edit / Review event"
+                >
+                  Edit / Review
+                </button>
+              )}
               <button
                 onClick={() => {
-                  // Edit / Review action
-                  alert('Edit / Review mode coming soon');
+                  cancelTableEdit();
+                  setSelectedEventForTable(null);
                 }}
-                className="px-3 py-2 rounded-lg text-sm font-semibold text-[#65B3AE] hover:bg-[#65B3AE] hover:bg-opacity-20 transition"
-                title="Edit / Review event"
-              >
-                Edit / Review
-              </button>
-              <button
-                onClick={() => setSelectedEventForTable(null)}
                 className="text-xl text-[#65B3AE] hover:text-[#7FD4D0] transition"
                 title="Close"
               >
@@ -1257,151 +1517,190 @@ const Dashboard: React.FC = () => {
               </button>
             </div>
           </div>
+
+          {editError && (
+            <div className="mx-4 mb-3 px-3 py-2 rounded-lg bg-red-500/20 border border-red-500/50 text-sm text-red-200">
+              {editError}
+            </div>
+          )}
           <div className="px-4">
             <table className="w-full text-sm">
               <tbody className="divide-y divide-[rgba(101,179,174,0.2)]">
-                <tr className="hover:bg-[rgba(101,179,174,0.05)] transition">
-                  <td className="px-3 py-2 text-[#65B3AE] font-semibold">Title</td>
-                  <td className="px-3 py-2 text-[#7FD4D0]">{selectedEventForTable.title}</td>
-                </tr>
-                <tr className="hover:bg-[rgba(101,179,174,0.05)] transition">
-                  <td className="px-3 py-2 text-[#65B3AE] font-semibold">Description</td>
-                  <td className="px-3 py-2 text-[#7FD4D0]">{selectedEventForTable.description || '—'}</td>
-                </tr>
-                <tr className="hover:bg-[rgba(101,179,174,0.05)] transition">
-                  <td className="px-3 py-2 text-[#65B3AE] font-semibold">Start Date</td>
-                  <td className="px-3 py-2 text-[#7FD4D0]">{formatDate(selectedEventForTable.startDate)}</td>
-                </tr>
-                <tr className="hover:bg-[rgba(101,179,174,0.05)] transition">
-                  <td className="px-3 py-2 text-[#65B3AE] font-semibold">End Date</td>
-                  <td className="px-3 py-2 text-[#7FD4D0]">{selectedEventForTable.endDate ? formatDate(selectedEventForTable.endDate) : '—'}</td>
-                </tr>
-                <tr className="hover:bg-[rgba(101,179,174,0.05)] transition">
-                  <td className="px-3 py-2 text-[#65B3AE] font-semibold">Type</td>
-                  <td className="px-3 py-2 text-[#7FD4D0] capitalize">{selectedEventForTable.type}</td>
-                </tr>
-                <tr className="hover:bg-[rgba(101,179,174,0.05)] transition">
-                  <td className="px-3 py-2 text-[#65B3AE] font-semibold">Category</td>
-                  <td className="px-3 py-2 text-[#7FD4D0] capitalize">{selectedEventForTable.category}</td>
-                </tr>
-                <tr className="hover:bg-[rgba(101,179,174,0.05)] transition">
-                  <td className="px-3 py-2 text-[#65B3AE] font-semibold">Tags</td>
-                  <td className="px-3 py-2 text-[#7FD4D0]">{selectedEventForTable.tags?.length ? selectedEventForTable.tags.join(', ') : '—'}</td>
-                </tr>
-                <tr className="hover:bg-[rgba(101,179,174,0.05)] transition">
-                  <td className="px-3 py-2 text-[#65B3AE] font-semibold">Favorite</td>
-                  <td className="px-3 py-2 text-[#7FD4D0]">{selectedEventForTable.isFavorite ? '★ Yes' : 'No'}</td>
-                </tr>
-                {selectedEventForTable.applicationLink && (
-                  <tr className="hover:bg-[rgba(101,179,174,0.05)] transition">
-                    <td className="px-3 py-2 text-[#65B3AE] font-semibold">Application Link</td>
-                    <td className="px-3 py-2 text-[#7FD4D0] truncate"><a href={selectedEventForTable.applicationLink} target="_blank" rel="noopener noreferrer" className="text-[#65B3AE] hover:underline">{selectedEventForTable.applicationLink}</a></td>
-                  </tr>
+                {detailRow('Title', selectedEventForTable.title, draftText('title'))}
+                {detailRow('Description', selectedEventForTable.description || '—', draftArea('description'))}
+                {detailRow('Start Date', formatDate(selectedEventForTable.startDate), draftDate('startDate'))}
+                {detailRow(
+                  'End Date',
+                  selectedEventForTable.endDate ? formatDate(selectedEventForTable.endDate) : '—',
+                  draftDate('endDate')
                 )}
-                <tr className="hover:bg-[rgba(101,179,174,0.05)] transition">
-                  <td className="px-3 py-2 text-[#65B3AE] font-semibold flex items-center gap-2">
+                {detailRow(
+                  'Type',
+                  <span className="capitalize">{selectedEventForTable.type}</span>,
+                  draftSelect(eventDraft?.type ?? selectedEventForTable.type, EVENT_TYPES, (type) => patchEventDraft({ type }))
+                )}
+                {detailRow(
+                  'Category',
+                  <span className="capitalize">{selectedEventForTable.category}</span>,
+                  draftSelect(eventDraft?.category ?? selectedEventForTable.category, EVENT_CATEGORIES, (category) =>
+                    patchEventDraft({ category })
+                  )
+                )}
+                {detailRow(
+                  'Tags',
+                  selectedEventForTable.tags?.length ? selectedEventForTable.tags.join(', ') : '—',
+                  draftText('tags', 'Comma separated, e.g. defi, quest')
+                )}
+                {detailRow(
+                  'Favorite',
+                  selectedEventForTable.isFavorite ? '★ Yes' : 'No',
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={eventDraft?.isFavorite ?? false}
+                      onChange={(e) => patchEventDraft({ isFavorite: e.target.checked })}
+                      className="w-4 h-4 accent-[#65B3AE]"
+                    />
+                    <span className="text-xs text-[rgba(101,179,174,0.8)]">Mark as favorite</span>
+                  </label>
+                )}
+                {/* Links only take a row when they hold something — except in
+                    edit mode, where an empty one is the only way to add it. */}
+                {(tableEditMode || selectedEventForTable.applicationLink) &&
+                  detailRow(
+                    'Application Link',
+                    externalLink(selectedEventForTable.applicationLink),
+                    draftText('applicationLink', 'https://…')
+                  )}
+                {(tableEditMode || selectedEventForTable.xPostLink) &&
+                  detailRow('X Post Link', externalLink(selectedEventForTable.xPostLink), draftText('xPostLink', 'https://x.com/…'))}
+                {detailRow(
+                  <span className="flex items-center gap-2">
                     Requirements
-                    <button
-                      onClick={() => toggleExpandedField('requirements')}
-                      className="w-5 h-5 flex items-center justify-center rounded-lg text-sm hover:bg-[#65B3AE] hover:bg-opacity-20 transition"
-                      title="Expand Requirements"
-                    >
-                      +
-                    </button>
-                  </td>
-                  <td className="px-3 py-2 text-[#7FD4D0]">{selectedEventForTable.requirements || '—'}</td>
-                </tr>
-                {expandedFields.has('requirements') && (
+                    {!tableEditMode && (
+                      <button
+                        onClick={() => toggleExpandedField('requirements')}
+                        className="w-5 h-5 flex items-center justify-center rounded-lg text-sm hover:bg-[#65B3AE] hover:bg-opacity-20 transition"
+                        title="Show additional requirement details"
+                      >
+                        {expandedFields.has('requirements') ? '−' : '+'}
+                      </button>
+                    )}
+                  </span>,
+                  selectedEventForTable.requirements || '—',
+                  draftArea('requirements', 'e.g. Developer account, GitHub submission')
+                )}
+                {!tableEditMode && expandedFields.has('requirements') && (
                   <tr className="bg-[rgba(101,179,174,0.05)]">
                     <td colSpan={2} className="px-3 py-3">
                       <div className="bg-[rgba(101,179,174,0.1)] border border-[rgba(101,179,174,0.2)] rounded-lg p-3">
                         <p className="text-xs text-[#65B3AE] font-semibold mb-2">Additional Requirements Details</p>
-                        <textarea
-                          value={tableDrafts.requirementsDetails}
-                          onChange={(e) => setTableDrafts(prev => ({ ...prev, requirementsDetails: e.target.value }))}
-                          onBlur={() => commitTableDraft('requirementsDetails')}
-                          placeholder="Add more requirement details..."
-                          className="w-full bg-[rgba(101,179,174,0.05)] border border-[rgba(101,179,174,0.2)] rounded px-2 py-2 text-xs text-[#7FD4D0] placeholder-[rgba(101,179,174,0.4)] focus:outline-none focus:border-[#65B3AE] resize-none h-16"
-                        />
+                        <p className="text-xs text-[#7FD4D0] whitespace-pre-wrap">
+                          {selectedEventForTable.requirementsDetails || 'Nothing added yet — use Edit / Review to add it.'}
+                        </p>
                       </div>
                     </td>
                   </tr>
                 )}
-                <tr className="hover:bg-[rgba(101,179,174,0.05)] transition">
-                  <td className="px-3 py-2 text-[#65B3AE] font-semibold">Resources</td>
-                  <td className="px-3 py-2 text-[#7FD4D0]">{selectedEventForTable.resources || '—'}</td>
-                </tr>
-                <tr className="hover:bg-[rgba(101,179,174,0.05)] transition">
-                  <td className="px-3 py-2 text-[#65B3AE] font-semibold flex items-center gap-2">
+                {tableEditMode &&
+                  detailRow(
+                    'Requirements (Details)',
+                    null,
+                    draftArea('requirementsDetails', 'Optional extra requirement detail')
+                  )}
+                {detailRow(
+                  'Resources',
+                  selectedEventForTable.resources || '—',
+                  draftArea('resources', 'e.g. Documentation, API docs, sample code')
+                )}
+                {detailRow(
+                  <span className="flex items-center gap-2">
                     Winner Criteria
-                    <button
-                      onClick={() => toggleExpandedField('winnerCriteria')}
-                      className="w-5 h-5 flex items-center justify-center rounded-lg text-sm hover:bg-[#65B3AE] hover:bg-opacity-20 transition"
-                      title="Expand Winner Criteria"
-                    >
-                      +
-                    </button>
-                  </td>
-                  <td className="px-3 py-2 text-[#7FD4D0]">{selectedEventForTable.winnerCriteria || '—'}</td>
-                </tr>
-                {expandedFields.has('winnerCriteria') && (
+                    {!tableEditMode && (
+                      <button
+                        onClick={() => toggleExpandedField('winnerCriteria')}
+                        className="w-5 h-5 flex items-center justify-center rounded-lg text-sm hover:bg-[#65B3AE] hover:bg-opacity-20 transition"
+                        title="Show additional winner criteria details"
+                      >
+                        {expandedFields.has('winnerCriteria') ? '−' : '+'}
+                      </button>
+                    )}
+                  </span>,
+                  selectedEventForTable.winnerCriteria || '—',
+                  draftArea('winnerCriteria', 'e.g. Code quality, innovation, completeness')
+                )}
+                {!tableEditMode && expandedFields.has('winnerCriteria') && (
                   <tr className="bg-[rgba(101,179,174,0.05)]">
                     <td colSpan={2} className="px-3 py-3">
                       <div className="bg-[rgba(101,179,174,0.1)] border border-[rgba(101,179,174,0.2)] rounded-lg p-3">
                         <p className="text-xs text-[#65B3AE] font-semibold mb-2">Additional Winner Criteria Details</p>
-                        <textarea
-                          value={tableDrafts.winnerCriteriaDetails}
-                          onChange={(e) => setTableDrafts(prev => ({ ...prev, winnerCriteriaDetails: e.target.value }))}
-                          onBlur={() => commitTableDraft('winnerCriteriaDetails')}
-                          placeholder="Add more winner criteria details..."
-                          className="w-full bg-[rgba(101,179,174,0.05)] border border-[rgba(101,179,174,0.2)] rounded px-2 py-2 text-xs text-[#7FD4D0] placeholder-[rgba(101,179,174,0.4)] focus:outline-none focus:border-[#65B3AE] resize-none h-16"
-                        />
+                        <p className="text-xs text-[#7FD4D0] whitespace-pre-wrap">
+                          {selectedEventForTable.winnerCriteriaDetails || 'Nothing added yet — use Edit / Review to add it.'}
+                        </p>
                       </div>
                     </td>
                   </tr>
                 )}
-                <tr className="hover:bg-[rgba(101,179,174,0.05)] transition">
-                  <td className="px-3 py-2 text-[#65B3AE] font-semibold">Winner Announcement Date</td>
-                  <td className="px-3 py-2 text-[#7FD4D0]">{selectedEventForTable.winnerAnnouncementDate ? formatDate(selectedEventForTable.winnerAnnouncementDate) : '—'}</td>
-                </tr>
-                <tr className="hover:bg-[rgba(101,179,174,0.05)] transition">
-                  <td className="px-3 py-2 text-[#65B3AE] font-semibold">Winners Pine</td>
-                  <td className="px-3 py-2">
-                    <input
-                      type="text"
-                      value={tableDrafts.winnersPine}
-                      onChange={(e) => setTableDrafts(prev => ({ ...prev, winnersPine: e.target.value }))}
-                      onBlur={() => commitTableDraft('winnersPine')}
-                      placeholder="—"
-                      className="w-full bg-transparent border border-transparent hover:border-[rgba(101,179,174,0.3)] focus:border-[#65B3AE] focus:bg-[rgba(101,179,174,0.05)] rounded px-2 py-1 text-[#7FD4D0] placeholder-[rgba(101,179,174,0.4)] focus:outline-none transition"
-                    />
-                  </td>
-                </tr>
-                {selectedEventForTable.notionLink && (
-                  <tr className="hover:bg-[rgba(101,179,174,0.05)] transition">
-                    <td className="px-3 py-2 text-[#65B3AE] font-semibold">Notion Link</td>
-                    <td className="px-3 py-2 text-[#7FD4D0] truncate"><a href={selectedEventForTable.notionLink} target="_blank" rel="noopener noreferrer" className="text-[#65B3AE] hover:underline">{selectedEventForTable.notionLink}</a></td>
-                  </tr>
+                {tableEditMode &&
+                  detailRow(
+                    'Winner Criteria (Details)',
+                    null,
+                    draftArea('winnerCriteriaDetails', 'Optional extra winner criteria detail')
+                  )}
+                {detailRow(
+                  'Winner Announcement Date',
+                  selectedEventForTable.winnerAnnouncementDate ? formatDate(selectedEventForTable.winnerAnnouncementDate) : '—',
+                  draftDate('winnerAnnouncementDate')
                 )}
-                {selectedEventForTable.rewards && (
+                {detailRow('Winners Pine', selectedEventForTable.winnersPine || '—', draftText('winnersPine'))}
+                {(tableEditMode || selectedEventForTable.notionLink) &&
+                  detailRow('Notion Link', externalLink(selectedEventForTable.notionLink), draftText('notionLink', 'https://notion.so/…'))}
+                {(tableEditMode || selectedEventForTable.rewards) && (
                   <>
-                    <tr className="hover:bg-[rgba(101,179,174,0.05)] transition">
-                      <td className="px-3 py-2 text-[#65B3AE] font-semibold">Reward Amount</td>
-                      <td className="px-3 py-2 text-[#7FD4D0]">{selectedEventForTable.rewards.amount} {selectedEventForTable.rewards.currency}</td>
-                    </tr>
-                    <tr className="hover:bg-[rgba(101,179,174,0.05)] transition">
-                      <td className="px-3 py-2 text-[#65B3AE] font-semibold">Reward Status</td>
-                      <td className="px-3 py-2 text-[#7FD4D0] capitalize">{selectedEventForTable.rewards.status}</td>
-                    </tr>
-                    <tr className="hover:bg-[rgba(101,179,174,0.05)] transition">
-                      <td className="px-3 py-2 text-[#65B3AE] font-semibold">Default Delivery Date</td>
-                      <td className="px-3 py-2 text-[#7FD4D0]">{formatDate(selectedEventForTable.rewards.defaultDeliveryDate)}</td>
-                    </tr>
-                    {selectedEventForTable.rewards.realizedDeliveryDate && (
-                      <tr className="hover:bg-[rgba(101,179,174,0.05)] transition">
-                        <td className="px-3 py-2 text-[#65B3AE] font-semibold">Realized Delivery Date</td>
-                        <td className="px-3 py-2 text-[#7FD4D0]">{formatDate(selectedEventForTable.rewards.realizedDeliveryDate)}</td>
-                      </tr>
+                    {detailRow(
+                      'Reward Amount',
+                      selectedEventForTable.rewards
+                        ? `${selectedEventForTable.rewards.amount} ${selectedEventForTable.rewards.currency}`
+                        : '—',
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={eventDraft?.rewardAmount ?? ''}
+                          onChange={(e) => patchEventDraft({ rewardAmount: e.target.value })}
+                          placeholder="e.g. 50000"
+                          className={editInputClass}
+                        />
+                        <select
+                          value={eventDraft?.rewardCurrency ?? 'MNT'}
+                          onChange={(e) => patchEventDraft({ rewardCurrency: e.target.value })}
+                          className={`${editInputClass} w-32`}
+                        >
+                          {REWARD_CURRENCIES.map((currency) => (
+                            <option key={currency} value={currency} className="bg-[#0A1628]">
+                              {currency}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                    {detailRow(
+                      'Reward Status',
+                      <span className="capitalize">{selectedEventForTable.rewards?.status ?? '—'}</span>,
+                      draftSelect(eventDraft?.rewardStatus ?? 'pending', REWARD_STATUSES, (rewardStatus) =>
+                        patchEventDraft({ rewardStatus })
+                      )
+                    )}
+                    {detailRow(
+                      'Default Delivery Date',
+                      selectedEventForTable.rewards ? formatDate(selectedEventForTable.rewards.defaultDeliveryDate) : '—',
+                      draftDate('defaultDeliveryDate')
+                    )}
+                    {detailRow(
+                      'Realized Delivery Date',
+                      selectedEventForTable.rewards?.realizedDeliveryDate
+                        ? formatDate(selectedEventForTable.rewards.realizedDeliveryDate)
+                        : '—',
+                      draftDate('realizedDeliveryDate')
                     )}
                   </>
                 )}
@@ -1410,15 +1709,20 @@ const Dashboard: React.FC = () => {
           </div>
 
           {/* Remarks Panel */}
-          <div className="mt-4 p-3 bg-[rgba(101,179,174,0.05)] border border-[rgba(101,179,174,0.2)] rounded-lg">
+          <div className="mt-4 mx-4 mb-4 p-3 bg-[rgba(101,179,174,0.05)] border border-[rgba(101,179,174,0.2)] rounded-lg">
             <p className="text-xs font-semibold text-[#65B3AE] mb-2">Remarks</p>
-            <textarea
-              value={tableDrafts.remarks}
-              onChange={(e) => setTableDrafts(prev => ({ ...prev, remarks: e.target.value }))}
-              onBlur={() => commitTableDraft('remarks')}
-              placeholder="Add any remarks or notes about this event..."
-              className="w-full bg-[rgba(101,179,174,0.1)] border border-[rgba(101,179,174,0.2)] rounded px-2 py-2 text-xs text-[#7FD4D0] placeholder-[rgba(101,179,174,0.4)] focus:outline-none focus:border-[#65B3AE] resize-none h-12"
-            />
+            {tableEditMode ? (
+              <textarea
+                value={eventDraft?.remarks ?? ''}
+                onChange={(e) => patchEventDraft({ remarks: e.target.value })}
+                placeholder="Add any remarks or notes about this event..."
+                className="w-full bg-[rgba(101,179,174,0.1)] border border-[rgba(101,179,174,0.3)] rounded px-2 py-2 text-xs text-white placeholder-[rgba(101,179,174,0.4)] focus:outline-none focus:border-[#65B3AE] resize-none h-16"
+              />
+            ) : (
+              <p className="text-xs text-[#7FD4D0] whitespace-pre-wrap">
+                {selectedEventForTable.remarks || 'No remarks yet.'}
+              </p>
+            )}
           </div>
         </div>
       )}
@@ -1628,63 +1932,17 @@ interface AddEventModalProps {
 }
 
 const AddEventModal: React.FC<AddEventModalProps> = ({ onClose, onAdd }) => {
-  const [formData, setFormData] = useState({
-    title: '',
-    category: 'mantle' as const,
-    startDate: toDateInputValue(new Date()),
-    endDate: '',
-    type: 'news' as const,
-    description: '',
-    requirements: '',
-    requirementsDetails: '',
-    resources: '',
-    applicationLink: '',
-    xPostLink: '',
-    winnerCriteria: '',
-    winnerCriteriaDetails: '',
-    winnerAnnouncementDate: '',
-    notionLink: '',
-    rewardAmount: '',
-    rewardCurrency: 'MNT',
-    defaultDeliveryDate: '',
-    realizedDeliveryDate: '',
-    rewardStatus: 'pending' as const,
-    winnersPine: '',
-    remarks: '',
-  });
+  const [formData, setFormData] = useState<EventFormDraft>(emptyEventDraft());
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const newEvent: Event = {
-      id: Date.now().toString(),
-      title: formData.title,
-      category: formData.category,
-      startDate: parseDateInputValue(formData.startDate),
-      endDate: formData.endDate ? parseDateInputValue(formData.endDate) : undefined,
-      type: formData.type,
-      description: formData.description,
-      requirements: formData.requirements || undefined,
-      requirementsDetails: formData.requirementsDetails || undefined,
-      resources: formData.resources || undefined,
-      applicationLink: formData.applicationLink || undefined,
-      xPostLink: formData.xPostLink || undefined,
-      winnerCriteria: formData.winnerCriteria || undefined,
-      winnerCriteriaDetails: formData.winnerCriteriaDetails || undefined,
-      winnerAnnouncementDate: formData.winnerAnnouncementDate ? parseDateInputValue(formData.winnerAnnouncementDate) : undefined,
-      notionLink: formData.notionLink || undefined,
-      rewards: formData.rewardAmount && formData.defaultDeliveryDate ? {
-        amount: formData.rewardAmount,
-        currency: formData.rewardCurrency,
-        defaultDeliveryDate: parseDateInputValue(formData.defaultDeliveryDate),
-        realizedDeliveryDate: formData.realizedDeliveryDate ? parseDateInputValue(formData.realizedDeliveryDate) : undefined,
-        status: formData.rewardStatus,
-      } : undefined,
-      tags: [],
-      isFavorite: false,
-      winnersPine: formData.winnersPine || undefined,
-      remarks: formData.remarks || undefined,
-    };
-    onAdd(newEvent);
+    const problem = validateEventDraft(formData);
+    if (problem) {
+      setError(problem);
+      return;
+    }
+    onAdd(draftToEvent(formData, Date.now().toString()));
   };
 
   const inputClass = 'bg-[rgba(101,179,174,0.1)] border-[rgba(101,179,174,0.3)] text-white placeholder-[rgba(255,255,255,0.4)]';
@@ -1706,6 +1964,12 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ onClose, onAdd }) => {
         </div>
 
         <form onSubmit={handleSubmit} className="p-6 space-y-3">
+          {error && (
+            <div className="p-3 bg-red-500/20 border border-red-500/50 rounded-lg">
+              <p className="text-sm text-red-200">{error}</p>
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-3">
             {/* Title */}
             <div>
@@ -1740,6 +2004,38 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ onClose, onAdd }) => {
                 onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
                 className={`w-full px-2 py-1 border rounded text-sm ${inputClass}`}
               />
+            </div>
+
+            {/* Category — drives the event's colour on the timeline */}
+            <div>
+              <label className="text-xs font-semibold text-[#7FD4D0] block mb-1">Category</label>
+              <select
+                value={formData.category}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value as Event['category'] })}
+                className={`w-full px-2 py-1 border rounded text-sm capitalize ${inputClass}`}
+              >
+                {EVENT_CATEGORIES.map((category) => (
+                  <option key={category} value={category} className="bg-[#0A1628] capitalize">
+                    {category}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Type — the badge shown on the card */}
+            <div>
+              <label className="text-xs font-semibold text-[#7FD4D0] block mb-1">Type</label>
+              <select
+                value={formData.type}
+                onChange={(e) => setFormData({ ...formData, type: e.target.value as Event['type'] })}
+                className={`w-full px-2 py-1 border rounded text-sm capitalize ${inputClass}`}
+              >
+                {EVENT_TYPES.map((type) => (
+                  <option key={type} value={type} className="bg-[#0A1628] capitalize">
+                    {type}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
@@ -1881,12 +2177,11 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ onClose, onAdd }) => {
                   onChange={(e) => setFormData({ ...formData, rewardCurrency: e.target.value })}
                   className={`w-full px-2 py-1 border rounded text-sm ${inputClass}`}
                 >
-                  <option value="MNT">MNT</option>
-                  <option value="BYREAL">BYREAL</option>
-                  <option value="SOL">SOL</option>
-                  <option value="ETH">ETH</option>
-                  <option value="USDC">USDC</option>
-                  <option value="USD">USD</option>
+                  {REWARD_CURRENCIES.map((currency) => (
+                    <option key={currency} value={currency}>
+                      {currency}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -1917,12 +2212,16 @@ const AddEventModal: React.FC<AddEventModalProps> = ({ onClose, onAdd }) => {
                 <label className={`text-xs font-semibold ${'text-[#7FD4D0]'} block mb-1`}>Reward Status</label>
                 <select
                   value={formData.rewardStatus}
-                  onChange={(e) => setFormData({ ...formData, rewardStatus: e.target.value as any })}
-                  className={`w-full px-2 py-1 border rounded text-sm ${inputClass}`}
+                  onChange={(e) =>
+                    setFormData({ ...formData, rewardStatus: e.target.value as EventFormDraft['rewardStatus'] })
+                  }
+                  className={`w-full px-2 py-1 border rounded text-sm capitalize ${inputClass}`}
                 >
-                  <option value="pending">Pending</option>
-                  <option value="delayed">Delayed</option>
-                  <option value="delivered">Delivered</option>
+                  {REWARD_STATUSES.map((status) => (
+                    <option key={status} value={status} className="capitalize">
+                      {status}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>

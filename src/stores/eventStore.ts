@@ -103,7 +103,10 @@ export const useEventStore = create<EventStore>((set) => ({
     }));
 
     try {
-      const dbRecord = eventToDb(updates);
+      // Convert the MERGED event, not the patch. eventToDb emits every column,
+      // so converting a partial patch would send null for every field the
+      // caller didn't mention and blank the rest of the row.
+      const dbRecord = eventToDb(updated);
       const { data, error } = await supabase
         .from('events')
         .update(dbRecord)
@@ -125,10 +128,13 @@ export const useEventStore = create<EventStore>((set) => ({
         error: String(error),
       }));
 
+      // Queue the DB-shaped record for the same reason the create path does:
+      // queueSync hands these keys straight to Supabase, which has no
+      // camelCase columns and no Date type.
       await offlineQueue.add({
         type: 'update',
         table: 'events',
-        record: { id, ...updates } as Record<string, unknown>,
+        record: { id, ...eventToDb(updated) } as Record<string, unknown>,
       });
 
       return null;
@@ -181,33 +187,40 @@ export const useEventStore = create<EventStore>((set) => ({
   },
 }));
 
+// supabase-js JSON-serializes the record, which DROPS undefined keys — so a
+// field the user cleared would silently keep its old column value. null is what
+// actually clears a column, so every optional field goes through this.
+function orNull<T>(value: T | undefined): T | null {
+  return value === undefined ? null : value;
+}
+
 // Utility functions to convert between Event and DB formats
 function eventToDb(event: Partial<Event>) {
   return {
     title: event.title,
     category: event.category,
     start_date: event.startDate?.toISOString(),
-    end_date: event.endDate?.toISOString(),
+    end_date: orNull(event.endDate?.toISOString()),
     type: event.type,
     description: event.description,
-    requirements: event.requirements,
-    resources: event.resources,
-    application_link: event.applicationLink,
-    x_post_link: event.xPostLink,
-    winner_criteria: event.winnerCriteria,
-    winner_announcement_date: event.winnerAnnouncementDate?.toISOString(),
-    notion_link: event.notionLink,
-    reward_amount: event.rewards?.amount,
-    reward_currency: event.rewards?.currency,
-    reward_default_delivery_date: event.rewards?.defaultDeliveryDate?.toISOString(),
-    reward_realized_delivery_date: event.rewards?.realizedDeliveryDate?.toISOString(),
-    reward_status: event.rewards?.status,
+    requirements: orNull(event.requirements),
+    resources: orNull(event.resources),
+    application_link: orNull(event.applicationLink),
+    x_post_link: orNull(event.xPostLink),
+    winner_criteria: orNull(event.winnerCriteria),
+    winner_announcement_date: orNull(event.winnerAnnouncementDate?.toISOString()),
+    notion_link: orNull(event.notionLink),
+    reward_amount: orNull(event.rewards?.amount),
+    reward_currency: orNull(event.rewards?.currency),
+    reward_default_delivery_date: orNull(event.rewards?.defaultDeliveryDate?.toISOString()),
+    reward_realized_delivery_date: orNull(event.rewards?.realizedDeliveryDate?.toISOString()),
+    reward_status: orNull(event.rewards?.status),
     tags: event.tags,
     is_favorite: event.isFavorite,
-    requirements_details: event.requirementsDetails,
-    winner_criteria_details: event.winnerCriteriaDetails,
-    winners_pine: event.winnersPine,
-    remarks: event.remarks,
+    requirements_details: orNull(event.requirementsDetails),
+    winner_criteria_details: orNull(event.winnerCriteriaDetails),
+    winners_pine: orNull(event.winnersPine),
+    remarks: orNull(event.remarks),
   };
 }
 
