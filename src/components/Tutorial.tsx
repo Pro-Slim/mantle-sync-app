@@ -52,13 +52,13 @@ const SETTINGS_STEP_DEFS: SettingsStepDef[] = [
   {
     id: 'settings-view-mode',
     title: '📊 View Mode',
-    description: 'Switches the bottom details panel between live Countdown clocks and a detailed Table view.',
+    description: 'Switches the bottom details panel between live Countdown clocks and the Table view. Table view is where every field of an event lives — and where you edit them.',
     target: '[data-tutorial="view-mode-toggle"]',
   },
   {
     id: 'settings-import',
     title: '📥 Import Events',
-    description: 'Bulk-import events from a CSV or Excel file.',
+    description: 'Bulk-import events from a CSV or Excel file. Use Download Template first so the columns line up.',
     target: '[data-tutorial="import-events"]',
   },
   {
@@ -116,7 +116,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'welcome',
     title: '👋 Welcome to MantleSynchApp',
-    description: 'Your event management timeline. Let\'s explore the key features!',
+    description: 'A shared timeline of every Mantle campaign, bounty and reward. Everyone signed in sees the same board, and edits show up for the rest of the team. Let\'s walk through it.',
     position: 'center',
   },
   {
@@ -129,9 +129,29 @@ const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'timeline',
     title: '📅 Timeline View',
-    description: 'Switch to Timeline for the horizontal year view. Hover over events to see details, click to edit — and the zoom controls appear next to the toggle.',
-    target: '[style*="overflow: hidden"]',
+    description: 'Switch to Timeline for the horizontal year view. Hover an event for a preview, click it to open its details. Zoom controls (− ⊙ +) appear beside the toggle, and Ctrl+Scroll zooms too — ⊙ jumps back to today.',
+    target: '[data-tutorial="timeline-area"]',
     position: 'bottom',
+  },
+  {
+    id: 'timeline-resize',
+    title: '↕️ Resize the Board',
+    description: 'Drag this thin line to give the timeline more or less height. Useful when a busy week needs room, or when you want the countdown clocks below in view.',
+    target: '[data-tutorial="timeline-resize"]',
+    position: 'bottom',
+  },
+  {
+    id: 'online-users',
+    title: '🟢 Who Else Is Here',
+    description: 'This counts everyone in the app right now — hover it for the list. Because the board is shared, it tells you whether somebody else might be editing the same event as you.',
+    target: '[data-tutorial="online-users"]',
+    position: 'bottom',
+  },
+  {
+    id: 'sync-status',
+    title: '📡 Offline & Syncing',
+    description: 'Lose connection and a red Offline chip appears in the header — you can keep working. Your changes queue up, show as "⚠️ n pending", and sync themselves the moment you\'re back online.',
+    position: 'center',
   },
   {
     id: 'music-player',
@@ -147,6 +167,13 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     target: '[data-tutorial="music-minimize"]',
     position: 'bottom',
     requiresMusicOpen: true,
+  },
+  {
+    id: 'calendar-tab',
+    title: '📑 The Calendar Tab',
+    description: 'This tab on the left edge pulls the calendar out over the board and tucks it away again. It draws over the timeline rather than squashing it, so nothing shifts around underneath.',
+    target: '[data-tutorial="calendar-tab"]',
+    position: 'right',
   },
   {
     id: 'sidebar',
@@ -165,6 +192,22 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     requiresSidebarOpen: true,
   },
   {
+    id: 'quick-stats',
+    title: '📈 Quick Stats',
+    description: 'Click to expand a running count of everything that needs chasing: total events, rewards still pending or in delay, and winner announcements due or overdue.',
+    target: '[data-tutorial="quick-stats"]',
+    position: 'right',
+    requiresSidebarOpen: true,
+  },
+  {
+    id: 'improve',
+    title: '💡 To Improve',
+    description: 'Type a suggestion here — attach a screenshot with the + if it helps — and it\'s logged and emailed straight to the team. Your ideas matter!',
+    target: '[data-to-improve-section]',
+    position: 'top',
+    requiresSidebarOpen: true,
+  },
+  {
     id: 'settings',
     title: '⚙️ Settings Menu',
     description: 'This is the Settings menu. Let\'s go through what every button in here does.',
@@ -175,8 +218,16 @@ const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'event-details',
     title: '🔍 Event Details Panel',
-    description: 'Click any event to see its full details here, including rewards, winner criteria, and remarks.',
+    description: 'Click any event to read it in full down here — dates, category, requirements, winner criteria, rewards and remarks. The + beside Requirements and Winner Criteria opens the extra notes kept against them.',
     target: '[data-event-details-panel]',
+    position: 'top',
+    requiresTableView: true,
+  },
+  {
+    id: 'edit-review',
+    title: '✏️ Edit / Review',
+    description: 'Press Edit / Review and every field in this panel turns into a form — title, dates, type, category, tags, links, rewards and remarks. Nothing is written until you press Save, and Cancel throws the changes away. Clearing a field really does empty it.',
+    target: '[data-tutorial="edit-review"]',
     position: 'top',
     requiresTableView: true,
   },
@@ -188,17 +239,9 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     position: 'top',
   },
   {
-    id: 'improve',
-    title: '💡 To Improve',
-    description: 'Share feedback and suggestions to help us improve the app. Your ideas matter!',
-    target: '[data-to-improve-section]',
-    position: 'top',
-    requiresSidebarOpen: true,
-  },
-  {
     id: 'done',
     title: '✅ All Set!',
-    description: 'You\'re ready to explore! Turn off this tutorial anytime from settings. Happy event tracking!',
+    description: 'You\'re ready to explore! Replay this tutorial anytime from Settings. Happy event tracking!',
     position: 'center',
   },
 ];
