@@ -51,10 +51,10 @@ const AuthModal: React.FC<AuthModalProps> = ({ onAuthSuccess }) => {
           {/* Header */}
           <div className="relative px-8 py-8 border-b border-[rgba(101,179,174,0.2)] bg-gradient-to-r from-[rgba(101,179,174,0.1)] to-[rgba(0,143,90,0.05)]">
             <h1 className="text-4xl font-bold text-white tracking-tight">
-              Mantle<span className="text-[#65B3AE]">Sync</span>
+              Mantle<span className="text-[#65B3AE]">Synch</span>
             </h1>
             <p className="text-sm text-[#7FD4D0] mt-2">
-              {isSignUp ? 'Create account to get started' : 'Sign in to your account'}
+              {isSignUp ? 'Create account to get started' : 'Lets get Synched'}
             </p>
 
             {/* Decorative line */}
@@ -125,7 +125,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onAuthSuccess }) => {
               disabled={isSubmitting || loading}
               className="w-full text-sm text-[#7FD4D0] hover:text-white transition-colors disabled:opacity-50"
             >
-              {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Create one"}
+              {isSignUp ? 'Already have an account? Sign in' : 'To have an account, talk to the most Slim Shark you know around'}
             </button>
           </form>
 
