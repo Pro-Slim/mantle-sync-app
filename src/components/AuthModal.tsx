@@ -125,7 +125,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ onAuthSuccess }) => {
               disabled={isSubmitting || loading}
               className="w-full text-sm text-[#7FD4D0] hover:text-white transition-colors disabled:opacity-50"
             >
-              {isSignUp ? 'Already have an account? Sign in' : 'To have an account, talk to the most Slim Shark you know around'}
+              {isSignUp ? 'Already have an account? Sign in' : 'To have an account, keep up the moMNTum!'}
             </button>
           </form>
 
