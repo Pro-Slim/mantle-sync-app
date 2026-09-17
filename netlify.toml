@@ -1,0 +1,8 @@
+# The Netlify Emails add-on generates its own function (emails/index.js) as
+# CommonJS, but that clashes with "type": "module" in package.json, which the
+# frontend's own build genuinely needs (tailwind.config.js / postcss.config.js
+# use `export default`). esbuild bundles the generated function into one file
+# and sidesteps the module-type conflict instead of forcing it through the
+# repo's own package.json.
+[functions.emails]
+  node_bundler = "esbuild"
