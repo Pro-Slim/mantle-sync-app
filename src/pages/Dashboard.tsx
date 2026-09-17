@@ -11,6 +11,8 @@ import AdminPanel from '../components/AdminPanel';
 import Tutorial from '../components/Tutorial';
 import OnlineUsers from '../components/OnlineUsers';
 import LoginAnimation from '../components/LoginAnimation';
+import StewardDutyCalendar from '../components/Duty/StewardDutyCalendar';
+import OnDutyPill from '../components/Duty/OnDutyPill';
 import { usePresence } from '../hooks/usePresence';
 import { isAdmin } from '../constants/admins';
 import { Event, CalendarReminder } from '../types';
@@ -206,7 +208,7 @@ const Dashboard: React.FC = () => {
   const [settingsSpinning, setSettingsSpinning] = React.useState(false);
   const [logoMusicOpen, setLogoMusicOpen] = React.useState(false);
   const [logoMusicMinimized, setLogoMusicMinimized] = React.useState(false);
-  const [mainView, setMainView] = React.useState<'week' | 'timeline'>('week');
+  const [mainView, setMainView] = React.useState<'week' | 'timeline' | 'duty'>('week');
   const [weekAnchor, setWeekAnchor] = React.useState(new Date());
   const [selectedCampaignDay, setSelectedCampaignDay] = React.useState<Date | null>(null);
   const [reminderModalOpen, setReminderModalOpen] = React.useState(false);
@@ -482,8 +484,9 @@ const Dashboard: React.FC = () => {
   
   // In week mode the sidebar's month grid acts as a week picker; on the
   // horizontal timeline it keeps scrolling to the date as it always has.
+  // The rota has no date axis, so a pick there only moves the week underneath.
   const handleCalendarDateNavigate = (date: Date) => {
-    if (mainView === 'week') {
+    if (mainView !== 'timeline') {
       setWeekAnchor(date);
       playWhooshSound();
     } else {
@@ -890,6 +893,11 @@ const Dashboard: React.FC = () => {
 
           {/* Right Section: Control Buttons */}
           <div className="flex gap-3 items-center flex-shrink-0">
+            {/* On-duty steward, readable from any view */}
+            <div data-tutorial="on-duty">
+              <OnDutyPill onOpenRota={() => setMainView('duty')} />
+            </div>
+
             {/* Online Users Indicator */}
             <div data-tutorial="online-users">
               <OnlineUsers onlineUsers={onlineUsers} loading={presenceLoading} />
@@ -1191,6 +1199,7 @@ const Dashboard: React.FC = () => {
               {([
                 { mode: 'week' as const, label: 'Week', hint: 'Weekly layout: active campaigns per day' },
                 { mode: 'timeline' as const, label: 'Timeline', hint: 'Horizontal timeline across the year' },
+                { mode: 'duty' as const, label: 'Rota', hint: 'Steward duty rota, with a live cursor on the current UTC hour' },
               ]).map(({ mode, label, hint }) => (
                 <button
                   key={mode}
@@ -1421,7 +1430,9 @@ const Dashboard: React.FC = () => {
         {/* Main Timeline Area */}
         <main className="flex-1 overflow-hidden flex flex-col relative">
           <div data-tutorial="timeline-area" style={{ height: `${timelineHeight}px`, overflow: 'hidden' }} className="relative mantle-frosted-light border-b border-[rgba(101,179,174,0.1)]">
-            {mainView === 'week' ? (
+            {mainView === 'duty' ? (
+              <StewardDutyCalendar />
+            ) : mainView === 'week' ? (
               <WeekView
                 events={events}
                 anchorDate={weekAnchor}

@@ -85,3 +85,39 @@ export const parseDateInputValue = (value: string): Date => {
   const [y, m, d] = value.split('-').map(Number);
   return new Date(y, m - 1, d);
 };
+
+// The steward rota is defined in UTC. Every other helper above is LOCAL time,
+// so a rota lookup built on getDay()/getHours() lands on the wrong cell for
+// anyone not sitting on the meridian -- and looks right to whoever wrote it.
+export const getUtcDayIndex = (date: Date): number => (date.getUTCDay() + 6) % 7;
+
+export const getUtcHour = (date: Date): number => date.getUTCHours();
+
+// Fraction of the way through the current UTC hour, for positioning the live
+// cursor between two rota rows.
+export const getUtcHourFraction = (date: Date): number =>
+  (date.getUTCMinutes() * 60 + date.getUTCSeconds()) / 3600;
+
+// A UTC hour shown at some offset can fall on the day before or after, which is
+// what the printed rota's three time columns quietly do. dayShift names that so
+// the gutter can print it instead of silently mislabelling the row.
+export const shiftHourLabel = (
+  utcHour: number,
+  offsetMinutes: number
+): { label: string; dayShift: number } => {
+  const total = utcHour * 60 + offsetMinutes;
+  const dayShift = Math.floor(total / 1440);
+  const within = total - dayShift * 1440;
+  const h = String(Math.floor(within / 60)).padStart(2, '0');
+  const m = String(within % 60).padStart(2, '0');
+  return { label: `${h}:${m}`, dayShift };
+};
+
+export const formatUtcOffset = (offsetMinutes: number): string => {
+  if (offsetMinutes === 0) return 'UTC';
+  const sign = offsetMinutes < 0 ? '−' : '+';
+  const abs = Math.abs(offsetMinutes);
+  const h = Math.floor(abs / 60);
+  const m = abs % 60;
+  return m === 0 ? `UTC${sign}${h}` : `UTC${sign}${h}:${String(m).padStart(2, '0')}`;
+};
