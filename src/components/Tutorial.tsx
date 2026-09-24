@@ -121,8 +121,8 @@ const TUTORIAL_STEPS: TutorialStep[] = [
   },
   {
     id: 'main-view',
-    title: '🗓️ Week or Timeline',
-    description: 'The main view opens on the weekly layout: seven days, each showing how many campaigns are active on it. A campaign running 1–30 August is active on every one of those days, so it appears across all of them. Click a day for its campaign list, or a campaign bar for its full details.',
+    title: '🗓️ Week, Timeline, Rota, Admins',
+    description: 'The main view opens on the weekly layout: seven days, each showing how many campaigns are active on it. A campaign running 1–30 August is active on every one of those days, so it appears across all of them. Click a day for its campaign list, or a campaign bar for its full details. Rota shows who is on duty. Admins lists every Mantle Telegram group with its owner, admins and bots, and marks where SLIM, HADUKEM, MINH or LUISMA is not admin yet, with a ready-to-send message asking the owner to appoint them.',
     target: '[data-tutorial="main-view-toggle"]',
     position: 'bottom',
   },

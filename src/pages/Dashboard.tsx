@@ -13,6 +13,7 @@ import OnlineUsers from '../components/OnlineUsers';
 import LoginAnimation from '../components/LoginAnimation';
 import StewardDutyCalendar from '../components/Duty/StewardDutyCalendar';
 import OnDutyPill from '../components/Duty/OnDutyPill';
+import CommunityRoster from '../components/Roster/CommunityRoster';
 import { usePresence } from '../hooks/usePresence';
 import { isAdmin } from '../constants/admins';
 import { Event, CalendarReminder } from '../types';
@@ -208,7 +209,7 @@ const Dashboard: React.FC = () => {
   const [settingsSpinning, setSettingsSpinning] = React.useState(false);
   const [logoMusicOpen, setLogoMusicOpen] = React.useState(false);
   const [logoMusicMinimized, setLogoMusicMinimized] = React.useState(false);
-  const [mainView, setMainView] = React.useState<'week' | 'timeline' | 'duty'>('week');
+  const [mainView, setMainView] = React.useState<'week' | 'timeline' | 'duty' | 'admins'>('week');
   const [weekAnchor, setWeekAnchor] = React.useState(new Date());
   const [selectedCampaignDay, setSelectedCampaignDay] = React.useState<Date | null>(null);
   const [reminderModalOpen, setReminderModalOpen] = React.useState(false);
@@ -484,7 +485,8 @@ const Dashboard: React.FC = () => {
   
   // In week mode the sidebar's month grid acts as a week picker; on the
   // horizontal timeline it keeps scrolling to the date as it always has.
-  // The rota has no date axis, so a pick there only moves the week underneath.
+  // The rota and the admin list have no date axis, so a pick there only moves
+  // the week underneath.
   const handleCalendarDateNavigate = (date: Date) => {
     if (mainView !== 'timeline') {
       setWeekAnchor(date);
@@ -1200,6 +1202,7 @@ const Dashboard: React.FC = () => {
                 { mode: 'week' as const, label: 'Week', hint: 'Weekly layout: active campaigns per day' },
                 { mode: 'timeline' as const, label: 'Timeline', hint: 'Horizontal timeline across the year' },
                 { mode: 'duty' as const, label: 'Rota', hint: 'Steward duty rota, with a live cursor on the current UTC hour' },
+                { mode: 'admins' as const, label: 'Admins', hint: 'Who is owner, admin or bot in each Mantle Telegram / Discord group, and where our stewards are missing' },
               ]).map(({ mode, label, hint }) => (
                 <button
                   key={mode}
@@ -1432,6 +1435,8 @@ const Dashboard: React.FC = () => {
           <div data-tutorial="timeline-area" style={{ height: `${timelineHeight}px`, overflow: 'hidden' }} className="relative mantle-frosted-light border-b border-[rgba(101,179,174,0.1)]">
             {mainView === 'duty' ? (
               <StewardDutyCalendar />
+            ) : mainView === 'admins' ? (
+              <CommunityRoster />
             ) : mainView === 'week' ? (
               <WeekView
                 events={events}
