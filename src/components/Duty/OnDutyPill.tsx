@@ -1,5 +1,5 @@
 import React from 'react';
-import { DAY_NAMES, slotColor } from '../../constants/stewards';
+import { DAY_NAMES, slotColor, slotLabel } from '../../constants/stewards';
 import { useCurrentDuty } from '../../hooks/useCurrentDuty';
 
 interface OnDutyPillProps {
@@ -10,7 +10,7 @@ const pad = (n: number): string => String(n).padStart(2, '0');
 
 const OnDutyPill: React.FC<OnDutyPillProps> = ({ onOpenRota }) => {
   const duty = useCurrentDuty();
-  const onDuty = duty.slot === 'IDLE' ? null : duty.slot;
+  const onDuty = duty.slot === 'IDLE' ? null : slotLabel(duty.slot);
   const accent = slotColor(duty.slot);
 
   const hours = Math.floor(duty.minutesLeftInShift / 60);

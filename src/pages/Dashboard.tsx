@@ -1260,7 +1260,7 @@ const Dashboard: React.FC = () => {
                 { mode: 'week' as const, label: 'Week', hint: 'Weekly layout: active campaigns per day' },
                 { mode: 'timeline' as const, label: 'Timeline', hint: 'Horizontal timeline across the year' },
                 { mode: 'duty' as const, label: 'Rota', hint: 'Steward duty rota, with a live cursor on the current UTC hour' },
-                { mode: 'admins' as const, label: 'Admins', hint: 'Who is owner, admin or bot in each Mantle Telegram / Discord group, and where our stewards are missing' },
+                { mode: 'admins' as const, label: 'Groups Tg & DC', hint: 'Who is owner, admin or bot in each Mantle Telegram / Discord group, and where our stewards are missing' },
               ]).map(({ mode, label, hint }) => (
                 <button
                   key={mode}

@@ -45,10 +45,10 @@ const stewardColor = (id: StewardId): string =>
 // The people whose admin coverage the matrix is built around. Rota stewards
 // keep their rota colour so one person reads as one colour across both views.
 export const TRACKED_ADMINS: TrackedAdmin[] = [
-  { id: 'SLIM', label: 'SLIM', handle: '@SlimOnShark', color: stewardColor('SLIM') },
-  { id: 'HADUKEM', label: 'HADUKEM', handle: '@hadukemv', color: stewardColor('HADUKEM') },
   { id: 'MINH', label: 'MINH', handle: '@ann_leminh', color: '#00D9A3' },
+  { id: 'SLIM', label: 'SlimOnShark', handle: '@SlimOnShark', color: stewardColor('SLIM') },
   { id: 'LUISMA', label: 'LUISMA', handle: '@Luismatz', color: stewardColor('LUISMA') },
+  { id: 'HADUKEM', label: 'HADUKEM', handle: '@hadukemv', color: stewardColor('HADUKEM') },
 ];
 
 export const PLATFORM_LABEL: Record<Platform, string> = {

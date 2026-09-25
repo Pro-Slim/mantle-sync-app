@@ -7,6 +7,7 @@ import {
   dutyAt,
   slotColor,
   weeklyHours,
+  slotLabel,
 } from '../../constants/stewards';
 import { formatUtcOffset, shiftHourLabel } from '../../utils/dateHelpers';
 import { useCurrentDuty } from '../../hooks/useCurrentDuty';
@@ -94,7 +95,7 @@ const StewardDutyCalendar: React.FC = () => {
     hasScrolled.current = true;
   }, [duty.utcHour]);
 
-  const onDuty = duty.slot === 'IDLE' ? null : duty.slot;
+  const onDuty = duty.slot === 'IDLE' ? null : slotLabel(duty.slot);
   const accent = slotColor(duty.slot);
   const hoursLeft = Math.floor(duty.minutesLeftInShift / 60);
   const minsLeft = duty.minutesLeftInShift % 60;
@@ -232,10 +233,10 @@ const StewardDutyCalendar: React.FC = () => {
                           opacity: idle && !isNow ? 0.45 : 1,
                         }}
                         title={`${day} ${hourRangeUtc(hour)} — ${
-                          idle ? 'no steward rostered' : slot
+                          idle ? 'no steward rostered' : slotLabel(slot)
                         }`}
                       >
-                        {idle ? '·' : slot}
+                        {idle ? '·' : slotLabel(slot)}
                       </div>
                     </div>
                   );

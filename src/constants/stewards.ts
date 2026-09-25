@@ -12,7 +12,7 @@ export interface Steward {
 export const STEWARDS: Steward[] = [
   { id: 'HADUKEM', label: 'HADUKEM', color: '#9D4EDD' },
   { id: 'LUISMA', label: 'LUISMA', color: '#00D4FF' },
-  { id: 'SLIM', label: 'SLIM', color: '#FFB703' },
+  { id: 'SLIM', label: 'SlimOnShark', color: '#FFB703' },
 ];
 
 export const IDLE_COLOR = '#5A6B7A';
@@ -63,6 +63,10 @@ export const dutyAt = (dayIndex: number, utcHour: number): DutySlot =>
 
 export const getSteward = (slot: DutySlot): Steward | null =>
   STEWARDS.find((s) => s.id === slot) ?? null;
+
+// Ids stay short and stable (the rota grid is keyed by them); this is the name
+// people see.
+export const slotLabel = (slot: DutySlot): string => getSteward(slot)?.label ?? slot;
 
 export const slotColor = (slot: DutySlot): string =>
   getSteward(slot)?.color ?? IDLE_COLOR;
