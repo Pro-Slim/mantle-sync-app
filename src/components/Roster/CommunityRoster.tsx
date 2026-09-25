@@ -8,7 +8,6 @@ import {
   TRACKED_ADMINS,
   TrackedAdmin,
   TrackedId,
-  appointmentRequest,
   coverageFor,
   handleKey,
   hasAdminList,
@@ -88,7 +87,6 @@ const CommunityRoster: React.FC = () => {
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
   const [platform, setPlatform] = useState<'all' | Platform>('all');
-  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [seeding, setSeeding] = useState(false);
 
   // Refetched each time the view opens: nothing pushes another steward's
@@ -152,23 +150,11 @@ const CommunityRoster: React.FC = () => {
   const panelOpen = creating || selected !== null;
   const columns = panelOpen
     ? 'minmax(170px,1.6fr) minmax(110px,1fr) repeat(4, minmax(78px,0.8fr))'
-    : 'minmax(190px,1.6fr) minmax(120px,1fr) repeat(4, minmax(84px,0.8fr)) minmax(130px,1.1fr) 88px';
+    : 'minmax(190px,1.6fr) minmax(120px,1fr) repeat(4, minmax(84px,0.8fr)) minmax(130px,1.1fr)';
 
   const openGroup = (id: string) => {
     setCreating(false);
     setSelectedId(id);
-  };
-
-  const copyAsk = async (row: Row) => {
-    const missing = TRACKED_ADMINS.filter((_, i) => isGap(row.coverage[i]));
-    try {
-      await navigator.clipboard.writeText(appointmentRequest(row.group, row.owners, missing));
-      setCopiedId(row.group.id);
-      setTimeout(() => setCopiedId((id) => (id === row.group.id ? null : id)), 1500);
-    } catch {
-      // The panel shows the same message in a text box it can be copied from.
-      openGroup(row.group.id);
-    }
   };
 
   const baselineEntries = ROSTER_BASELINE.reduce((n, g) => n + g.members.length, 0);
@@ -189,13 +175,13 @@ const CommunityRoster: React.FC = () => {
           </span>
         )}
 
-        <div className="flex-1" />
+        <div className="hidden sm:block flex-1" />
 
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search a group, @handle or title"
-          className="w-56 bg-[rgba(101,179,174,0.1)] border border-[rgba(101,179,174,0.3)] rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-[rgba(101,179,174,0.4)] focus:outline-none focus:border-[#65B3AE]"
+          className="w-full sm:w-56 min-w-0 bg-[rgba(101,179,174,0.1)] border border-[rgba(101,179,174,0.3)] rounded-lg px-2.5 py-1.5 text-xs text-white placeholder-[rgba(101,179,174,0.4)] focus:outline-none focus:border-[#65B3AE]"
         />
 
         {platforms.length > 1 && (
@@ -360,12 +346,9 @@ const CommunityRoster: React.FC = () => {
                   </div>
                 ))}
                 {!panelOpen && (
-                  <>
-                    <div className="px-2 py-2 text-[10px] font-bold uppercase tracking-wider text-[#7FD4D0] opacity-60">
-                      Bots
-                    </div>
-                    <div />
-                  </>
+                  <div className="px-2 py-2 text-[10px] font-bold uppercase tracking-wider text-[#7FD4D0] opacity-60">
+                    Bots
+                  </div>
                 )}
               </div>
 
@@ -376,7 +359,6 @@ const CommunityRoster: React.FC = () => {
               {visible.map((row) => {
                 const matches = matchesIn(row);
                 const isSelected = row.group.id === selectedId;
-                const askable = row.recorded && row.coverage.some(isGap);
                 return (
                   <div
                     key={row.group.id}
@@ -454,20 +436,6 @@ const CommunityRoster: React.FC = () => {
                           ))}
                           {row.bots.length > 3 && (
                             <span className="text-[10px] text-[#7FD4D0] opacity-60">+{row.bots.length - 3}</span>
-                          )}
-                        </div>
-                        <div className="px-2 py-2 text-right">
-                          {askable && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                void copyAsk(row);
-                              }}
-                              className="px-2 py-1 rounded text-[10px] font-semibold text-[#7FD4D0] border border-[rgba(101,179,174,0.3)] hover:bg-[rgba(101,179,174,0.15)] whitespace-nowrap"
-                              title="Copy a message asking the owner to appoint the stewards who are missing"
-                            >
-                              {copiedId === row.group.id ? 'Copied ✓' : 'Copy ask'}
-                            </button>
                           )}
                         </div>
                       </>

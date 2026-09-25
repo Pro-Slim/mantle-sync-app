@@ -93,20 +93,3 @@ export const coverageFor = (groupMembers: RosterMember[], tracked: TrackedAdmin)
   if (member?.status === 'requested') return { kind: 'requested', member };
   return hasAdminList(groupMembers) ? { kind: 'missing' } : { kind: 'unknown' };
 };
-
-// The message a steward pastes to a group owner. Names only the people still
-// missing, so it can be sent as-is.
-export const appointmentRequest = (
-  group: RosterGroup,
-  owners: RosterMember[],
-  missing: TrackedAdmin[],
-): string => {
-  const who = missing.map((t) => t.handle);
-  const list =
-    who.length <= 1 ? who.join('') : `${who.slice(0, -1).join(', ')} and ${who[who.length - 1]}`;
-  const greeting = owners.length > 0 ? `Hi ${owners.map((o) => o.handle).join(', ')},` : 'Hi,';
-  const where = group.url ? `${group.name} (${group.url})` : group.name;
-  return `${greeting} could you please appoint ${list} as ${
-    who.length === 1 ? 'an admin' : 'admins'
-  } in ${where}? Thank you!`;
-};

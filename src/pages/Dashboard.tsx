@@ -15,6 +15,7 @@ import StewardDutyCalendar from '../components/Duty/StewardDutyCalendar';
 import OnDutyPill from '../components/Duty/OnDutyPill';
 import CommunityRoster from '../components/Roster/CommunityRoster';
 import { usePresence } from '../hooks/usePresence';
+import { useViewport } from '../hooks/useViewport';
 import { isAdmin } from '../constants/admins';
 import { Event, CalendarReminder } from '../types';
 import { parseCSV, csvToEvents, eventsToCSV } from '../utils/csvImporter';
@@ -179,6 +180,18 @@ const validateEventDraft = (draft: EventFormDraft): string | null => {
   return null;
 };
 
+// How much of the viewport the timeline pane claims, leaving the header and
+// the countdown dock room to stay on screen. The preferred share is a little
+// over half, but a short viewport -- a phone held sideways, where the whole
+// window is ~360px tall -- has to give the floor up rather than push the dock
+// off the bottom, which is what the old flat 600px did.
+const paneHeightFor = (viewportHeight: number): number => {
+  const reservedForChrome = 150;
+  const preferred = viewportHeight * 0.52;
+  const ceiling = Math.max(150, viewportHeight - reservedForChrome);
+  return Math.round(Math.min(600, ceiling, Math.max(260, preferred)));
+};
+
 const Dashboard: React.FC = () => {
   const { user, session, userApprovalStatus, signOut } = useAuth();
   const [showAuthModal, setShowAuthModal] = React.useState(!session);
@@ -194,7 +207,13 @@ const Dashboard: React.FC = () => {
   const [soundMuted, setSoundMutedState] = React.useState(() => isSoundMuted());
   const [sidebarVisible, setSidebarVisible] = React.useState(false);
   const [countdownClocks, setCountdownClocks] = React.useState<CountdownClockState[]>([]);
-  const [timelineHeight, setTimelineHeight] = React.useState(600);
+  const viewport = useViewport();
+  const { isMobile } = viewport;
+  // The pane used to be a flat 600px, which on a phone left the countdown dock
+  // nothing and in landscape overran the viewport outright. Height is a share
+  // of what the device actually has, and the user's drag still overrides it.
+  const [timelineHeight, setTimelineHeight] = React.useState(() => paneHeightFor(window.innerHeight));
+  const [timelineHeightPinned, setTimelineHeightPinned] = React.useState(false);
   const [hoverEnabled, setHoverEnabled] = React.useState(true);
   const [zoomLevel, setZoomLevel] = React.useState(2.4); // Default 240% to show full year
   const [detailsViewMode, setDetailsViewMode] = React.useState<'countdown' | 'table'>('countdown');
@@ -439,6 +458,13 @@ const Dashboard: React.FC = () => {
     };
   }, []);
 
+  // Re-derive the split when the viewport changes (rotation, browser chrome
+  // sliding away). Once the user has dragged the handle their choice sticks.
+  useEffect(() => {
+    if (timelineHeightPinned) return;
+    setTimelineHeight(paneHeightFor(viewport.height));
+  }, [viewport.height, viewport.width, timelineHeightPinned]);
+
   // Close the Settings dropdown when clicking outside it
   useEffect(() => {
     if (!settingsOpen) return;
@@ -595,21 +621,31 @@ const Dashboard: React.FC = () => {
     setCountdownClocks(countdownClocks.filter(c => c.eventId !== eventId));
   };
 
-  const handleResizeStart = (e: React.MouseEvent) => {
+  // Pointer events rather than mouse events, so the handle can also be dragged
+  // by a finger. The upper clamp is what stops the pane from growing past the
+  // viewport and burying the countdown dock offscreen.
+  const handleResizeStart = (e: React.PointerEvent) => {
     resizeStartYRef.current = e.clientY;
-    const handleMouseMove = (moveEvent: MouseEvent) => {
+    const minHeight = 180;
+    const maxHeight = Math.max(minHeight, window.innerHeight - 200);
+    setTimelineHeightPinned(true);
+
+    const handlePointerMove = (moveEvent: PointerEvent) => {
+      moveEvent.preventDefault();
       const delta = moveEvent.clientY - resizeStartYRef.current;
-      setTimelineHeight(prev => Math.max(300, prev + delta));
+      setTimelineHeight(prev => Math.min(maxHeight, Math.max(minHeight, prev + delta)));
       resizeStartYRef.current = moveEvent.clientY;
     };
 
-    const handleMouseUp = () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+    const handlePointerUp = () => {
+      document.removeEventListener('pointermove', handlePointerMove);
+      document.removeEventListener('pointerup', handlePointerUp);
+      document.removeEventListener('pointercancel', handlePointerUp);
     };
 
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
+    document.addEventListener('pointermove', handlePointerMove, { passive: false });
+    document.addEventListener('pointerup', handlePointerUp);
+    document.addEventListener('pointercancel', handlePointerUp);
   };
 
   const handleZoomIn = () => {
@@ -778,7 +814,7 @@ const Dashboard: React.FC = () => {
 
   return (
     <div
-      className="h-screen bg-gradient-to-b from-[#050D20] via-[#0A1628] to-[#0E2520] flex flex-col relative overflow-hidden"
+      className="app-shell bg-gradient-to-b from-[#050D20] via-[#0A1628] to-[#0E2520] flex flex-col relative overflow-hidden"
       onMouseOver={(e) => {
         const target = e.target as HTMLElement;
         if (target.tagName === 'BUTTON' || target.closest('button')) {
@@ -809,9 +845,13 @@ const Dashboard: React.FC = () => {
 
       {/* Header */}
       <header ref={headerRef} className="mantle-frosted border-b border-[rgba(101,179,174,0.2)] backdrop-blur-md relative z-20">
-        <div className="max-w-full px-6 py-4 flex justify-between items-center gap-6">
+        <div
+          className={`max-w-full flex justify-between items-center safe-x ${
+            isMobile ? 'px-3 py-2 gap-2 flex-wrap' : 'px-6 py-4 gap-6'
+          }`}
+        >
           {/* Left Section: Mantle Logo & Title */}
-          <div className="flex gap-4 items-center flex-1">
+          <div className={`flex items-center ${isMobile ? 'gap-2' : 'gap-4 flex-1'}`}>
             {/* Mantle Icon */}
             {/* Sync Status Indicator */}
             {!isOnline && (
@@ -841,14 +881,16 @@ const Dashboard: React.FC = () => {
                 <img
                   src="/mantle-logo.svg"
                   alt="Mantle"
-                  className={`w-9 h-9 mantle-glow-pulse transition-transform hover:scale-110 ${logoMusicOpen ? 'mantle-spin' : ''}`}
+                  className={`${isMobile ? 'w-7 h-7' : 'w-9 h-9'} mantle-glow-pulse transition-transform hover:scale-110 ${logoMusicOpen ? 'mantle-spin' : ''}`}
                 />
               </button>
               <div>
-                <h1 className="text-3xl font-bold text-white tracking-tight">
+                <h1 className={`font-bold text-white tracking-tight ${isMobile ? 'text-lg' : 'text-3xl'}`}>
                   Mantle<span className="text-[#65B3AE]">Synch</span>App
                 </h1>
-                <p className="text-xs text-[#65B3AE] opacity-70 -mt-1">Event Timeline</p>
+                {!isMobile && (
+                  <p className="text-xs text-[#65B3AE] opacity-70 -mt-1">Event Timeline</p>
+                )}
               </div>
             </div>
           </div>
@@ -894,7 +936,13 @@ const Dashboard: React.FC = () => {
           )}
 
           {/* Right Section: Control Buttons */}
-          <div className="flex gap-3 items-center flex-shrink-0">
+          <div
+            className={
+              isMobile
+                ? 'mobile-hscroll flex gap-2 items-center w-full order-last pb-1'
+                : 'flex gap-3 items-center flex-shrink-0'
+            }
+          >
             {/* On-duty steward, readable from any view */}
             <div data-tutorial="on-duty">
               <OnDutyPill onOpenRota={() => setMainView('duty')} />
@@ -927,7 +975,15 @@ const Dashboard: React.FC = () => {
 
               {/* Settings Dropdown Menu */}
               {settingsOpen && (
-                <div className="absolute top-full right-0 mt-2 w-56 mantle-frosted rounded-lg border border-[rgba(101,179,174,0.3)] shadow-xl z-40">
+                /* Inside a horizontally scrolling row an absolutely placed menu
+                   gets clipped, so on mobile it detaches into a fixed sheet. */
+                <div
+                  className={
+                    isMobile
+                      ? 'fixed left-1/2 -translate-x-1/2 top-[var(--calendar-header-h,88px)] mt-2 w-[min(20rem,92vw)] max-h-[70vh] overflow-y-auto mantle-frosted rounded-lg border border-[rgba(101,179,174,0.3)] shadow-xl z-50'
+                      : 'absolute top-full right-0 mt-2 w-56 mantle-frosted rounded-lg border border-[rgba(101,179,174,0.3)] shadow-xl z-40'
+                  }
+                >
                   <div className="px-4 py-3 border-b border-[rgba(101,179,174,0.2)] flex items-center gap-2">
                     <SettingsIcon size={20} fill="#7FD4D0" />
                     <h3 className="text-sm font-bold text-[#7FD4D0]">Settings</h3>
@@ -1194,10 +1250,12 @@ const Dashboard: React.FC = () => {
               />
 
             {/* Divider */}
-            <div className="w-px h-6 bg-gradient-to-b from-[#65B3AE] via-[#65B3AE] to-transparent opacity-20" />
+            {!isMobile && (
+              <div className="w-px h-6 bg-gradient-to-b from-[#65B3AE] via-[#65B3AE] to-transparent opacity-20" />
+            )}
 
             {/* Main View Toggle */}
-            <div data-tutorial="main-view-toggle" className="flex gap-1 p-0.5 rounded-lg bg-[rgba(101,179,174,0.08)]">
+            <div data-tutorial="main-view-toggle" className="flex gap-1 p-0.5 rounded-lg bg-[rgba(101,179,174,0.08)] flex-shrink-0">
               {([
                 { mode: 'week' as const, label: 'Week', hint: 'Weekly layout: active campaigns per day' },
                 { mode: 'timeline' as const, label: 'Timeline', hint: 'Horizontal timeline across the year' },
@@ -1432,7 +1490,15 @@ const Dashboard: React.FC = () => {
       <div className="flex flex-1 overflow-hidden relative z-10">
         {/* Main Timeline Area */}
         <main className="flex-1 overflow-hidden flex flex-col relative">
-          <div data-tutorial="timeline-area" style={{ height: `${timelineHeight}px`, overflow: 'hidden' }} className="relative mantle-frosted-light border-b border-[rgba(101,179,174,0.1)]">
+          {/* On a phone the pane just fills whatever the header and dock leave;
+              a fixed height there only produced an empty strip or an overflow. */}
+          <div
+            data-tutorial="timeline-area"
+            style={isMobile ? { overflow: 'hidden' } : { height: `${timelineHeight}px`, overflow: 'hidden' }}
+            className={`relative mantle-frosted-light border-b border-[rgba(101,179,174,0.1)] ${
+              isMobile ? 'flex-1 min-h-0 flex flex-col' : ''
+            }`}
+          >
             {mainView === 'duty' ? (
               <StewardDutyCalendar />
             ) : mainView === 'admins' ? (
@@ -1449,36 +1515,50 @@ const Dashboard: React.FC = () => {
                 }}
               />
             ) : (
-              <Timeline
-                events={events}
-                onEventSelect={(event) => {
-                  if (event && detailsViewMode === 'table') {
-                    setSelectedEventForTable(event);
-                  } else if (!event) {
-                    setSelectedEventForTable(null);
-                  }
-                }}
-                onEventUpdate={handleEventUpdate}
-                onEventDelete={handleEventDelete}
-                onAddCountdown={handleAddCountdown}
-                hoverEnabled={hoverEnabled}
-                zoomLevel={zoomLevel}
-                timelineRef={timelineRef}
-              />
+              <>
+                {/* A year on a horizontal axis needs the long edge; rather
+                    than degrade the timeline into something unreadable we ask
+                    for the rotation. CSS decides when this shows. */}
+                <div className="rotate-hint">
+                  <span aria-hidden="true">📱↻</span>
+                  <span>Turn your phone sideways — the timeline reads best in landscape.</span>
+                </div>
+                <div className="flex-1 min-h-0 h-full">
+                <Timeline
+                  events={events}
+                  onEventSelect={(event) => {
+                    if (event && detailsViewMode === 'table') {
+                      setSelectedEventForTable(event);
+                    } else if (!event) {
+                      setSelectedEventForTable(null);
+                    }
+                  }}
+                  onEventUpdate={handleEventUpdate}
+                  onEventDelete={handleEventDelete}
+                  onAddCountdown={handleAddCountdown}
+                  hoverEnabled={hoverEnabled}
+                  zoomLevel={zoomLevel}
+                  timelineRef={timelineRef}
+                />
+                </div>
+              </>
             )}
           </div>
 
-          {/* Resize Handle */}
-          <div
-            data-tutorial="timeline-resize"
-            ref={timelineResizeRef}
-            onMouseDown={handleResizeStart}
-            className="h-1 cursor-ns-resize transition-all bg-gradient-to-r from-transparent via-[#65B3AE] to-transparent opacity-30 hover:opacity-70 hover:shadow-lg hover:shadow-[#65B3AE]/50"
-            title="Drag to resize timeline area"
-          />
+          {/* Resize Handle. Desktop only: on a phone the pane fills the space. */}
+          {!isMobile && (
+            <div
+              data-tutorial="timeline-resize"
+              ref={timelineResizeRef}
+              onPointerDown={handleResizeStart}
+              style={{ touchAction: 'none' }}
+              className="h-1 cursor-ns-resize transition-all bg-gradient-to-r from-transparent via-[#65B3AE] to-transparent opacity-30 hover:opacity-70 hover:shadow-lg hover:shadow-[#65B3AE]/50"
+              title="Drag to resize timeline area"
+            />
+          )}
 
           {/* Scrollable area below timeline */}
-          <div className="flex-1 overflow-y-auto" />
+          {!isMobile && <div className="flex-1 overflow-y-auto" />}
         </main>
       </div>
 
@@ -1744,17 +1824,34 @@ const Dashboard: React.FC = () => {
       )}
 
       {/* Event Countdown Clocks at Bottom */}
-      <div data-countdown-section className="mantle-frosted border-t border-[rgba(101,179,174,0.2)] px-4 py-4 overflow-x-auto relative z-10">
-        <div className="flex gap-4 justify-center flex-wrap min-h-[120px] items-center">
+      <div
+        data-countdown-section
+        className={`mantle-frosted border-t border-[rgba(101,179,174,0.2)] overflow-x-auto relative z-10 safe-bottom ${
+          isMobile ? 'px-3 py-2' : 'px-4 py-4'
+        }`}
+      >
+        <div
+          className={`flex gap-4 justify-center items-center ${
+            isMobile ? 'flex-nowrap min-h-0' : 'flex-wrap min-h-[120px]'
+          }`}
+        >
           {countdownClocks.length === 0 ? (
-            <div className="text-center py-4">
-              <p className="text-sm text-[rgba(101,179,174,0.6)]">
-                No countdown clocks active
+            /* Empty, this dock is only a hint -- on a phone it shrinks to one
+               line so it cannot take half the screen, as it did before. */
+            isMobile ? (
+              <p className="text-[11px] text-[rgba(101,179,174,0.5)] py-1 text-center">
+                Tap an event to add a countdown
               </p>
-              <p className="text-xs text-[rgba(101,179,174,0.4)] mt-1">
-                Click on an event to add one
-              </p>
-            </div>
+            ) : (
+              <div className="text-center py-4">
+                <p className="text-sm text-[rgba(101,179,174,0.6)]">
+                  No countdown clocks active
+                </p>
+                <p className="text-xs text-[rgba(101,179,174,0.4)] mt-1">
+                  Click on an event to add one
+                </p>
+              </div>
+            )
           ) : (
             countdownClocks.map(countdown => {
               const event = events.find(e => e.id === countdown.eventId);

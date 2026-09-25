@@ -7,11 +7,9 @@ import {
   RosterMember,
   TRACKED_ADMINS,
   TrackedAdmin,
-  appointmentRequest,
   coverageFor,
   handleKey,
   isPerson,
-  ownersOf,
   roleLabel,
 } from '../../constants/communityRoster';
 import { GroupFields, useRosterStore } from '../../stores/rosterStore';
@@ -216,7 +214,6 @@ const GroupPanel: React.FC<GroupPanelProps> = ({ group, members, readOnly, onClo
   const { saveGroup, deleteGroup, addMember, updateMember, deleteMember } = useRosterStore();
   const [busy, setBusy] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
-  const [copied, setCopied] = useState(false);
   const [groupDraft, setGroupDraft] = useState<GroupFields | null>(
     group ? null : { name: '', platform: 'telegram', url: '', notes: '' },
   );
@@ -235,11 +232,8 @@ const GroupPanel: React.FC<GroupPanelProps> = ({ group, members, readOnly, onClo
     .filter((m) => isPerson(m) && m.status === 'active')
     .sort((a, b) => Number(b.role === 'owner') - Number(a.role === 'owner'));
   const bots = members.filter((m) => m.role === 'bot');
-  const owners = ownersOf(members);
   const coverage = TRACKED_ADMINS.map((t) => ({ tracked: t, coverage: coverageFor(members, t) }));
-  const notYetAdmin = coverage.filter((c) => c.coverage.kind !== 'admin').map((c) => c.tracked);
   const notAsked = coverage.filter((c) => c.coverage.kind === 'missing' || c.coverage.kind === 'unknown');
-  const request = group && notYetAdmin.length > 0 ? appointmentRequest(group, owners, notYetAdmin) : null;
 
   const saveMember = async (member: RosterMember, draft: MemberDraft): Promise<boolean> => {
     const clash = members.find(
@@ -291,17 +285,6 @@ const GroupPanel: React.FC<GroupPanelProps> = ({ group, members, readOnly, onClo
     const what = member.role === 'bot' ? 'bot' : 'admin';
     if (!confirm(`Remove ${what} ${member.handle} from ${group?.name}?`)) return;
     void run(() => deleteMember(member.id));
-  };
-
-  const copyRequest = async () => {
-    if (!request) return;
-    try {
-      await navigator.clipboard.writeText(request);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      setLocalError('Copy was blocked by the browser. Select the message and copy it by hand.');
-    }
   };
 
   const submitGroup = async () => {
@@ -521,40 +504,27 @@ const GroupPanel: React.FC<GroupPanelProps> = ({ group, members, readOnly, onClo
                 ))}
               </div>
 
-              {request && (
-                <div className="mt-2 space-y-1.5">
-                  <div className="text-[10px] text-[#7FD4D0] opacity-60">
-                    {owners.length > 0
-                      ? `Message for ${owners.map((o) => o.handle).join(', ')}:`
-                      : 'No owner recorded — message for whoever runs the group:'}
-                  </div>
-                  <textarea readOnly value={request} className={`${inputClass} h-20 resize-none`} />
-                  <div className="flex justify-end gap-1">
-                    {!readOnly && notAsked.length > 0 && (
-                      <button
-                        className={quietButton}
-                        disabled={busy}
-                        onClick={() =>
-                          void run(async () => {
-                            for (const { tracked } of notAsked) {
-                              await addMember(group.id, {
-                                handle: tracked.handle,
-                                role: 'admin',
-                                title: null,
-                                status: 'requested',
-                                notes: null,
-                              });
-                            }
-                          })
+              {!readOnly && notAsked.length > 0 && (
+                <div className="mt-2 flex justify-end">
+                  <button
+                    className={quietButton}
+                    disabled={busy}
+                    onClick={() =>
+                      void run(async () => {
+                        for (const { tracked } of notAsked) {
+                          await addMember(group.id, {
+                            handle: tracked.handle,
+                            role: 'admin',
+                            title: null,
+                            status: 'requested',
+                            notes: null,
+                          });
                         }
-                      >
-                        Mark all asked
-                      </button>
-                    )}
-                    <button className={primaryButton} onClick={copyRequest}>
-                      {copied ? 'Copied ✓' : 'Copy message'}
-                    </button>
-                  </div>
+                      })
+                    }
+                  >
+                    Mark all asked
+                  </button>
                 </div>
               )}
             </section>
