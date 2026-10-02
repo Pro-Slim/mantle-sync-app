@@ -84,6 +84,31 @@ export const weeklyHours = (): Record<DutySlot, number> => {
   return totals;
 };
 
+export interface MonthHours {
+  totals: Record<DutySlot, number>;
+  days: number;
+  // How many times each weekday (Monday-first) falls in the month: the reason
+  // two months of the same length can still differ by a shift or two.
+  weekdayCounts: number[];
+}
+
+// Hours each steward is rostered in a calendar month, counted day by day from
+// the weekly ROTA. The month runs on UTC dates because the rota is defined in
+// UTC: a shift crossing UTC midnight on the 31st is split across both months.
+export const monthlyHours = (year: number, month: number): MonthHours => {
+  const totals: Record<DutySlot, number> = { HADUKEM: 0, LUISMA: 0, SLIM: 0, IDLE: 0 };
+  const weekdayCounts = [0, 0, 0, 0, 0, 0, 0];
+  const days = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+  for (let date = 1; date <= days; date++) {
+    const dayIndex = (new Date(Date.UTC(year, month, date)).getUTCDay() + 6) % 7;
+    weekdayCounts[dayIndex]++;
+    for (let hour = 0; hour < 24; hour++) {
+      totals[dutyAt(dayIndex, hour)]++;
+    }
+  }
+  return { totals, days, weekdayCounts };
+};
+
 export interface Shift {
   slot: DutySlot;
   startDayIndex: number;

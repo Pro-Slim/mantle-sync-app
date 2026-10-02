@@ -5,6 +5,7 @@ import {
   IDLE_COLOR,
   STEWARDS,
   dutyAt,
+  monthlyHours,
   slotColor,
   weeklyHours,
   slotLabel,
@@ -19,15 +20,18 @@ const ZONE_STORAGE_KEY = 'mantle-sync-duty-zone';
 interface Zone {
   id: string;
   minutes: number;
+  label?: string;
 }
 
 // The printed rota carries UTC-6 and UTC-3 beside UTC because that is where the
-// stewards sit; Local is added so nobody has to do the arithmetic themselves.
+// stewards sit. Singapore keeps UTC+8 all year (no daylight saving), so a fixed
+// offset is exact. Local is added so nobody has to do the arithmetic themselves.
 const buildZones = (): Zone[] => [
   { id: 'utc', minutes: 0 },
   { id: 'utc-3', minutes: -180 },
   { id: 'utc-6', minutes: -360 },
-  { id: 'local', minutes: -new Date().getTimezoneOffset() },
+  { id: 'sgt', minutes: 480, label: 'Singapore' },
+  { id: 'local', minutes: -new Date().getTimezoneOffset(), label: 'Local' },
 ];
 
 const readStoredZone = (): string => {
@@ -47,6 +51,10 @@ const storeZone = (id: string): void => {
 };
 
 const pad = (n: number): string => String(n).padStart(2, '0');
+const MONTH_NAMES = [
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December',
+];
 const hourRangeUtc = (hour: number): string => `${pad(hour)}:00-${pad((hour + 1) % 24)}:00 UTC`;
 
 const StewardDutyCalendar: React.FC = () => {
@@ -59,6 +67,21 @@ const StewardDutyCalendar: React.FC = () => {
   const zones = useMemo(buildZones, []);
   const zone = zones.find((z) => z.id === zoneId) ?? zones[0];
   const totals = useMemo(weeklyHours, []);
+  // The month the monthly totals are for, as a UTC year/month pair. Opens on
+  // the current month; the arrows step back to last month for invoicing.
+  const [month, setMonth] = useState(() => {
+    const now = new Date();
+    return { year: now.getUTCFullYear(), month: now.getUTCMonth() };
+  });
+  const monthTotals = useMemo(() => monthlyHours(month.year, month.month), [month]);
+  const stepMonth = (delta: number) =>
+    setMonth(({ year, month: m }) => {
+      const next = new Date(Date.UTC(year, m + delta, 1));
+      return { year: next.getUTCFullYear(), month: next.getUTCMonth() };
+    });
+  const isCurrentMonth =
+    month.year === duty.now.getUTCFullYear() && month.month === duty.now.getUTCMonth();
+  const weekdayBreakdown = DAY_NAMES.map((d, i) => `${monthTotals.weekdayCounts[i]}× ${d}`).join(', ');
 
   const utcNow = duty.now.toLocaleTimeString('en-US', {
     timeZone: 'UTC',
@@ -146,14 +169,14 @@ const StewardDutyCalendar: React.FC = () => {
                 setZoneId(z.id);
                 storeZone(z.id);
               }}
-              title={`Label the hour column in ${formatUtcOffset(z.minutes)}`}
+              title={`Label the hour column in ${z.label ? `${z.label} time, ` : ''}${formatUtcOffset(z.minutes)}`}
               className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
                 zone.id === z.id
                   ? 'bg-[#65B3AE] text-[#050D20]'
                   : 'text-[#7FD4D0] hover:bg-[rgba(101,179,174,0.15)]'
               }`}
             >
-              {z.id === 'local' ? 'Local' : formatUtcOffset(z.minutes)}
+              {z.label ?? formatUtcOffset(z.minutes)}
             </button>
           ))}
         </div>
@@ -289,6 +312,56 @@ const StewardDutyCalendar: React.FC = () => {
         </div>
         <span className="text-[10px] text-[#7FD4D0] opacity-40 ml-auto">
           Rota is fixed in UTC; the hour column only re-labels.
+        </span>
+      </div>
+
+      {/* Monthly totals, for invoicing: the weekly rota counted over the real
+          dates of the month, so a month with five Saturdays shows it. */}
+      <div
+        className="flex items-center gap-4 px-4 py-2 border-t border-[rgba(101,179,174,0.15)] flex-shrink-0 flex-wrap safe-bottom"
+        title={`${MONTH_NAMES[month.month]} ${month.year}: ${monthTotals.days} days (${weekdayBreakdown}). Counted on UTC dates from the current rota.`}
+      >
+        <span className="text-[10px] text-[#7FD4D0] opacity-50 uppercase tracking-wider">
+          Monthly hours
+        </span>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => stepMonth(-1)}
+            className="w-7 h-7 rounded-md text-[#65B3AE] font-bold hover:bg-[rgba(101,179,174,0.15)] transition-all"
+            title="Previous month"
+            aria-label="Previous month"
+          >
+            ‹
+          </button>
+          <span className="text-xs font-semibold text-white tabular-nums min-w-[7.5rem] text-center">
+            {MONTH_NAMES[month.month]} {month.year}
+            {isCurrentMonth && <span className="ml-1 text-[9px] text-[#65B3AE] opacity-80">now</span>}
+          </span>
+          <button
+            onClick={() => stepMonth(1)}
+            className="w-7 h-7 rounded-md text-[#65B3AE] font-bold hover:bg-[rgba(101,179,174,0.15)] transition-all"
+            title="Next month"
+            aria-label="Next month"
+          >
+            ›
+          </button>
+        </div>
+        {STEWARDS.map((s) => (
+          <div key={s.id} className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-sm" style={{ background: s.color }} />
+            <span className="text-xs font-semibold" style={{ color: s.color }}>
+              {s.label}
+            </span>
+            <span className="text-xs text-white font-semibold tabular-nums">{monthTotals.totals[s.id]}h</span>
+          </div>
+        ))}
+        <div className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-sm opacity-40" style={{ background: IDLE_COLOR }} />
+          <span className="text-xs text-[#7FD4D0] opacity-60">Idle</span>
+          <span className="text-xs text-[#7FD4D0] opacity-60 tabular-nums">{monthTotals.totals.IDLE}h</span>
+        </div>
+        <span className="text-[10px] text-[#7FD4D0] opacity-40 ml-auto">
+          {monthTotals.days} days · UTC dates
         </span>
       </div>
     </div>
