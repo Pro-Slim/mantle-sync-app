@@ -2,6 +2,7 @@ import React, { useMemo, useRef } from 'react';
 import { Event } from '../../types';
 import { getCategoryColor, getCategoryLabel } from '../../utils/colorHelpers';
 import { useViewport } from '../../hooks/useViewport';
+import { REMINDER_COLOR, remindersOn } from '../../constants/reminders';
 import {
   addDays,
   formatDate,
@@ -10,6 +11,7 @@ import {
   inclusiveDayCount,
   isEventActiveOn,
   isSameDay,
+  startOfDay,
 } from '../../utils/dateHelpers';
 
 interface WeekViewProps {
@@ -18,6 +20,7 @@ interface WeekViewProps {
   onAnchorDateChange: (date: Date) => void;
   onDaySelect: (date: Date) => void;
   onEventSelect: (event: Event) => void;
+  onReminderSelect?: () => void;
 }
 
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -28,6 +31,7 @@ const WeekView: React.FC<WeekViewProps> = ({
   onAnchorDateChange,
   onDaySelect,
   onEventSelect,
+  onReminderSelect,
 }) => {
   const weekDays = useMemo(() => getWeekDays(anchorDate), [anchorDate]);
   // Compact only when the seven columns are genuinely narrow; a phone held
@@ -71,6 +75,7 @@ const WeekView: React.FC<WeekViewProps> = ({
 
   const today = new Date();
   const todayIndex = weekDays.findIndex(day => isSameDay(day, today));
+  const weekReminders = useMemo(() => weekDays.map(day => remindersOn(day)), [weekDays]);
 
   return (
     <div
@@ -179,9 +184,43 @@ const WeekView: React.FC<WeekViewProps> = ({
       </div>
 
       {/* Campaign rows: each bar covers every day the campaign is active */}
-      <div className={`flex-1 overflow-y-auto ${isMobile ? 'px-2 py-2' : 'px-4 py-3'}`}>
+      <div className={`flex-1 overflow-y-auto flex flex-col ${isMobile ? 'px-2 py-2' : 'px-4 py-3'}`}>
+        {/* Reminders due this week, in their day's column; a tap opens the
+            reminders tray, where the full wording and the next dates are. */}
+        {weekReminders.some(dayReminders => dayReminders.length > 0) && (
+          <div className={`grid grid-cols-7 mb-2 flex-shrink-0 ${isMobile ? 'gap-0.5' : 'gap-1'}`}>
+            {weekReminders.map((dayReminders, index) => (
+              <div key={index} className="flex flex-col gap-0.5 min-w-0">
+                {dayReminders.map(occurrence => {
+                  const isToday = index === todayIndex;
+                  const isPast = occurrence.date < startOfDay(today);
+                  return (
+                    <button
+                      key={occurrence.reminder.id}
+                      onClick={onReminderSelect}
+                      title={`${occurrence.label} — ${formatDate(occurrence.date)}${isToday ? ' (today)' : ''}`}
+                      className={`rounded-md py-1 text-[10px] font-bold truncate border transition-all hover:brightness-125 ${
+                        isMobile ? 'px-0.5 text-center' : 'px-1.5 text-left'
+                      } ${isToday ? '' : 'border-dashed'}`}
+                      style={{
+                        color: isToday ? '#050D20' : REMINDER_COLOR,
+                        borderColor: isToday ? REMINDER_COLOR : `${REMINDER_COLOR}80`,
+                        background: isToday ? REMINDER_COLOR : `${REMINDER_COLOR}1A`,
+                        opacity: isPast ? 0.45 : 1,
+                      }}
+                    >
+                      <span aria-hidden="true">{occurrence.reminder.icon}</span>
+                      {!isMobile && <span className="ml-1">{occurrence.reminder.shortTitle}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            ))}
+          </div>
+        )}
+
         {weekCampaigns.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-center">
+          <div className="flex-1 flex flex-col items-center justify-center text-center">
             <p className="text-sm text-[rgba(101,179,174,0.7)]">No campaigns are active this week.</p>
             <p className="text-xs text-[rgba(101,179,174,0.45)] mt-1">
               {isMobile

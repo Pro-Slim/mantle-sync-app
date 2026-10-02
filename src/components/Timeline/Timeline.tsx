@@ -1,6 +1,14 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Event } from '../../types';
-import { getPositionFromDate, getMonthLabel } from '../../utils/dateHelpers';
+import {
+  getPositionFromDate,
+  getMonthLabel,
+  getTotalTimelineDays,
+  startOfDay,
+  TIMELINE_END,
+  TIMELINE_START,
+} from '../../utils/dateHelpers';
+import { REMINDER_COLOR, remindersBetween } from '../../constants/reminders';
 import EventNode from './EventNode';
 import TodayMarker from './TodayMarker';
 import EventCard from './EventCard';
@@ -18,6 +26,7 @@ interface TimelineProps {
   hoverEnabled?: boolean;
   zoomLevel?: number;
   timelineRef?: React.RefObject<HTMLDivElement>;
+  onReminderSelect?: () => void;
 }
 
 const Timeline: React.FC<TimelineProps> = ({
@@ -29,7 +38,8 @@ const Timeline: React.FC<TimelineProps> = ({
   onAddCountdown,
   hoverEnabled = true,
   zoomLevel = 1,
-  timelineRef: externalTimelineRef
+  timelineRef: externalTimelineRef,
+  onReminderSelect,
 }) => {
   const [hoveredEventId, setHoveredEventId] = useState<string | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
@@ -131,6 +141,22 @@ const Timeline: React.FC<TimelineProps> = ({
       };
     }), [TIMELINE_WIDTH]);
 
+  // Every reminder date across the timeline's span, as a lane under the month
+  // labels. Weekly marks are dropped once zoomed out far enough that a week is
+  // under ~10px and they would only smear into a line.
+  const reminderMarks = useMemo(() => {
+    const weekSpacing = (TIMELINE_WIDTH / getTotalTimelineDays()) * 7;
+    const today = startOfDay(new Date());
+    return remindersBetween(TIMELINE_START, TIMELINE_END)
+      .filter((o) => o.reminder.id !== 'weekly-report' || weekSpacing >= 10)
+      .map((o) => ({
+        ...o,
+        x: getPositionFromDate(o.date, TIMELINE_WIDTH) + PADDING,
+        past: o.date < today,
+      }));
+  }, [TIMELINE_WIDTH, PADDING]);
+  const REMINDER_LANE_Y = LINE_Y + 68;
+
   const activeEvents = events.filter(
     (event) =>
       (hoverEnabled && hoveredEventId === event.id) ||
@@ -222,6 +248,44 @@ const Timeline: React.FC<TimelineProps> = ({
               )}
             </g>
           ))}
+
+          {/* Reminder lane: dots for the Friday report, diamonds for the
+              monthly stats; past dates dimmed. */}
+          <g>
+            {reminderMarks.map((mark) => {
+              const isMonthly = mark.reminder.id === 'monthly-stats';
+              const size = isMonthly ? 5 : 2.5;
+              return (
+                <g
+                  key={`${mark.reminder.id}-${mark.date.getTime()}`}
+                  onClick={onReminderSelect}
+                  onMouseDown={(e) => e.stopPropagation()}
+                  style={{ cursor: onReminderSelect ? 'pointer' : 'default' }}
+                  opacity={mark.past ? 0.3 : 0.9}
+                >
+                  <title>{`${mark.label} — ${mark.date.toLocaleDateString('en-US', {
+                    weekday: 'short',
+                    day: 'numeric',
+                    month: 'short',
+                    year: 'numeric',
+                  })}`}</title>
+                  <circle cx={mark.x} cy={REMINDER_LANE_Y} r={8} fill="transparent" />
+                  {isMonthly ? (
+                    <rect
+                      x={mark.x - size}
+                      y={REMINDER_LANE_Y - size}
+                      width={size * 2}
+                      height={size * 2}
+                      fill={REMINDER_COLOR}
+                      transform={`rotate(45 ${mark.x} ${REMINDER_LANE_Y})`}
+                    />
+                  ) : (
+                    <circle cx={mark.x} cy={REMINDER_LANE_Y} r={size} fill={REMINDER_COLOR} />
+                  )}
+                </g>
+              );
+            })}
+          </g>
 
           {/* Event nodes */}
           {events.map((event) => (

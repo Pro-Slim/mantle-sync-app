@@ -131,10 +131,10 @@ const StewardDutyCalendar: React.FC = () => {
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-4 px-4 py-3 border-b border-[rgba(101,179,174,0.15)] flex-shrink-0 flex-wrap">
         <div className="flex items-center gap-3">
-          <span className="text-[#65B3AE] font-bold text-sm tracking-wide">STEWARD ROTA</span>
+          <span className="text-[#65B3AE] font-bold text-sm tracking-wide">STEWARD SCHEDULE</span>
           <span
             className="font-mono text-sm text-[#7FD4D0] tabular-nums"
-            title="Current UTC time. The rota is defined in UTC."
+            title="Current UTC time. The schedule is defined in UTC."
           >
             {utcNow} UTC
           </span>
@@ -311,7 +311,7 @@ const StewardDutyCalendar: React.FC = () => {
           <span className="text-xs text-[#7FD4D0] opacity-60 tabular-nums">{totals.IDLE}h</span>
         </div>
         <span className="text-[10px] text-[#7FD4D0] opacity-40 ml-auto">
-          Rota is fixed in UTC; the hour column only re-labels.
+          Schedule is fixed in UTC; the hour column only re-labels.
         </span>
       </div>
 
@@ -319,7 +319,7 @@ const StewardDutyCalendar: React.FC = () => {
           dates of the month, so a month with five Saturdays shows it. */}
       <div
         className="flex items-center gap-4 px-4 py-2 border-t border-[rgba(101,179,174,0.15)] flex-shrink-0 flex-wrap safe-bottom"
-        title={`${MONTH_NAMES[month.month]} ${month.year}: ${monthTotals.days} days (${weekdayBreakdown}). Each steward's hours are counted on their own local dates, from the current rota.`}
+        title={`${MONTH_NAMES[month.month]} ${month.year}: ${monthTotals.days} days (${weekdayBreakdown}). Each steward's hours are counted on their own local dates, from the current schedule.`}
       >
         <span className="text-[10px] text-[#7FD4D0] opacity-50 uppercase tracking-wider">
           Monthly hours

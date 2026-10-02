@@ -27,7 +27,7 @@ const OnDutyPill: React.FC<OnDutyPillProps> = ({ onOpenRota }) => {
         onClick={onOpenRota}
         className="flex items-center gap-1.5 px-3 py-1 rounded-lg transition-all hover:brightness-125"
         style={{ background: `${accent}1A`, border: `1px solid ${accent}4D` }}
-        title={onDuty ? `${onDuty} is on duty — open the rota` : 'Nobody rostered right now — open the rota'}
+        title={onDuty ? `${onDuty} is on duty — open the Steward Schedule` : 'Nobody on duty right now — open the Steward Schedule'}
       >
         <span
           className={`w-2 h-2 rounded-full ${onDuty ? 'animate-pulse' : 'opacity-50'}`}
@@ -46,7 +46,7 @@ const OnDutyPill: React.FC<OnDutyPillProps> = ({ onOpenRota }) => {
         <div className="text-[#7FD4D0] opacity-80">
           {onDuty ? 'Ends in' : 'Next shift in'} {countdown}
         </div>
-        <div className="text-[#7FD4D0] opacity-40 mt-1 text-[10px]">Click to open the rota</div>
+        <div className="text-[#7FD4D0] opacity-40 mt-1 text-[10px]">Click to open the Steward Schedule</div>
       </div>
     </div>
   );

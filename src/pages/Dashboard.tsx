@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import Timeline, { BASE_TIMELINE_WIDTH, TIMELINE_PADDING } from '../components/Timeline/Timeline';
 import WeekView from '../components/Timeline/WeekView';
-import CalendarWidget from '../components/Calendar/CalendarWidget';
+import RemindersPanel from '../components/Reminders/RemindersPanel';
 import DayCampaignsModal from '../components/Calendar/DayCampaignsModal';
 import EventCountdownClock from '../components/EventCountdownClock';
 import AuthModal from '../components/AuthModal';
@@ -17,7 +17,7 @@ import CommunityRoster from '../components/Roster/CommunityRoster';
 import { usePresence } from '../hooks/usePresence';
 import { useViewport } from '../hooks/useViewport';
 import { isAdmin } from '../constants/admins';
-import { Event, CalendarReminder } from '../types';
+import { Event } from '../types';
 import { parseCSV, csvToEvents, eventsToCSV } from '../utils/csvImporter';
 import { getPositionFromDate, toDateInputValue, parseDateInputValue, formatDate, isEventActiveOn } from '../utils/dateHelpers';
 import { useAuth } from '../contexts/AuthContext';
@@ -231,9 +231,6 @@ const Dashboard: React.FC = () => {
   const [mainView, setMainView] = React.useState<'week' | 'timeline' | 'duty' | 'admins'>('week');
   const [weekAnchor, setWeekAnchor] = React.useState(new Date());
   const [selectedCampaignDay, setSelectedCampaignDay] = React.useState<Date | null>(null);
-  const [reminderModalOpen, setReminderModalOpen] = React.useState(false);
-  const [selectedReminderDate, setSelectedReminderDate] = React.useState<Date | null>(null);
-  const [reminderTitle, setReminderTitle] = React.useState('');
   const [logsModalOpen, setLogsModalOpen] = React.useState(false);
   const [improvementNotes, setImprovementNotes] = React.useState('');
   const [improvementAttachment, setImprovementAttachment] = React.useState<File | null>(null);
@@ -509,44 +506,11 @@ const Dashboard: React.FC = () => {
 
 
   
-  // In week mode the sidebar's month grid acts as a week picker; on the
-  // horizontal timeline it keeps scrolling to the date as it always has.
-  // The rota and the admin list have no date axis, so a pick there only moves
-  // the week underneath.
-  const handleCalendarDateNavigate = (date: Date) => {
-    if (mainView !== 'timeline') {
-      setWeekAnchor(date);
-      playWhooshSound();
-    } else {
-      scrollTimelineToDate(date, { smooth: true, sound: true });
-    }
-  };
-
-  const handleCalendarDateSelect = (date: Date) => {
-    setSelectedReminderDate(date);
-    setReminderModalOpen(true);
-  };
-
   const handleCalendarDayCampaigns = (date: Date) => {
     setWeekAnchor(date);
     setSelectedCampaignDay(date);
   };
 
-    const handleCreateReminder = async () => {
-    if (!selectedReminderDate || !reminderTitle.trim() || !user?.id) {
-      alert('Please enter a reminder title');
-      return;
-    }
-    const newReminder: Omit<CalendarReminder, 'id'> = {
-      date: selectedReminderDate,
-      title: reminderTitle.trim(),
-    };
-    await useReminderStore.getState().addReminder(newReminder);
-    setReminderModalOpen(false);
-    setReminderTitle('');
-    setSelectedReminderDate(null);
-    await addLog('create_reminder', `Added: ${reminderTitle.trim()}`);
-  };
 
 
     const handleDeleteReminder = async (reminderId: string) => {
@@ -847,7 +811,7 @@ const Dashboard: React.FC = () => {
       <header ref={headerRef} className="mantle-frosted border-b border-[rgba(101,179,174,0.2)] backdrop-blur-md relative z-20">
         <div
           className={`max-w-full flex justify-between items-center safe-x ${
-            isMobile ? 'px-3 py-2 gap-2 flex-wrap' : 'px-6 py-4 gap-6'
+            isMobile ? 'px-3 py-2 gap-2 flex-wrap' : 'px-6 py-4 gap-x-6 gap-y-3 flex-wrap'
           }`}
         >
           {/* Left Section: Mantle Logo & Title */}
@@ -1259,14 +1223,14 @@ const Dashboard: React.FC = () => {
               {([
                 { mode: 'week' as const, label: 'Week', hint: 'Weekly layout: active campaigns per day' },
                 { mode: 'timeline' as const, label: 'Timeline', hint: 'Horizontal timeline across the year' },
-                { mode: 'duty' as const, label: 'Rota', hint: 'Steward duty rota, with a live cursor on the current UTC hour' },
-                { mode: 'admins' as const, label: 'Groups Tg & DC', hint: 'Who is owner, admin or bot in each Mantle Telegram / Discord group, and where our stewards are missing' },
+                { mode: 'duty' as const, label: 'Steward Schedule', hint: 'Who is on duty each hour, with a live cursor on the current UTC hour and monthly hours per steward' },
+                { mode: 'admins' as const, label: 'Groups TG, DC & X', hint: 'Who is owner, admin or bot in each Mantle Telegram / Discord group, and where our stewards are missing' },
               ]).map(({ mode, label, hint }) => (
                 <button
                   key={mode}
                   onClick={() => setMainView(mode)}
                   title={hint}
-                  className={`px-3 py-1.5 rounded-md text-sm font-semibold transition-all ${
+                  className={`px-3 py-1.5 rounded-md text-sm font-semibold transition-all whitespace-nowrap ${
                     mainView === mode
                       ? 'bg-[#65B3AE] text-[#050D20]'
                       : 'text-[#7FD4D0] hover:bg-[rgba(101,179,174,0.15)]'
@@ -1315,7 +1279,7 @@ const Dashboard: React.FC = () => {
         className={`calendar-tray-handle ${!sidebarVisible ? 'tray-collapsed-handle' : ''}`}
         aria-expanded={sidebarVisible}
         aria-controls="calendar-tray"
-        title={sidebarVisible ? 'Hide the calendar' : 'Show the calendar'}
+        title={sidebarVisible ? 'Hide reminders' : 'Show reminders'}
       >
         <span className="tray-handle-arrow" aria-hidden="true">›</span>
       </button>
@@ -1335,26 +1299,19 @@ const Dashboard: React.FC = () => {
             {/* Tray heading with its own collapse chevron, alongside the pull tab */}
             <div className="flex justify-between items-center mb-4">
               <h2 className="font-bold text-white flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-[#65B3AE]" />
-                Calendar
+                <span className="w-2 h-2 rounded-full bg-[#F472B6]" />
+                Reminders
               </h2>
               <button
                 onClick={() => setSidebarVisible(false)}
                 className="w-7 h-7 flex items-center justify-center rounded-lg text-[#65B3AE] hover:bg-[rgba(101,179,174,0.15)] transition-all font-bold"
-                title="Hide the calendar"
+                title="Hide reminders"
               >
                 ‹
               </button>
             </div>
 
-            <CalendarWidget
-              onDateSelect={handleCalendarDateNavigate}
-              onDateDoubleClick={handleCalendarDateSelect}
-              onDayCampaignsSelect={handleCalendarDayCampaigns}
-              events={events}
-              reminders={reminders}
-              onDeleteReminder={handleDeleteReminder}
-            />
+            <RemindersPanel savedReminders={reminders} onDeleteSaved={handleDeleteReminder} />
 
             {/* Quick Stats */}
             <div data-tutorial="quick-stats" className="mt-8 p-4 rounded-lg bg-white bg-opacity-5 border border-[rgba(101,179,174,0.1)]">
@@ -1513,6 +1470,7 @@ const Dashboard: React.FC = () => {
                   setDetailsViewMode('table');
                   setSelectedEventForTable(event);
                 }}
+                onReminderSelect={() => setSidebarVisible(true)}
               />
             ) : (
               <>
@@ -1539,6 +1497,7 @@ const Dashboard: React.FC = () => {
                   hoverEnabled={hoverEnabled}
                   zoomLevel={zoomLevel}
                   timelineRef={timelineRef}
+                  onReminderSelect={() => setSidebarVisible(true)}
                 />
                 </div>
               </>
@@ -1905,65 +1864,6 @@ const Dashboard: React.FC = () => {
         />
       )}
 
-      {/* Reminder Modal */}
-      {reminderModalOpen && selectedReminderDate && (
-        <div className="fixed inset-0 bg-black bg-opacity-70 backdrop-blur-md flex items-center justify-center z-50 p-4">
-          <div className="mantle-frosted rounded-xl w-full max-w-md">
-            <div className="sticky top-0 flex justify-between items-center p-6 border-b border-[rgba(101,179,174,0.2)] bg-[rgba(5,13,32,0.8)]">
-              <h2 className="text-2xl font-bold text-white">Create Reminder</h2>
-              <button
-                onClick={() => {
-                  setReminderModalOpen(false);
-                  setReminderTitle('');
-                  setSelectedReminderDate(null);
-                }}
-                className="text-2xl font-bold text-[#7FD4D0] hover:text-[#65B3AE] transition"
-              >
-                ×
-              </button>
-            </div>
-
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="text-sm font-semibold text-[#7FD4D0] block mb-2">
-                  Date: {selectedReminderDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-                </label>
-              </div>
-
-              <div>
-                <label className="text-sm font-semibold text-[#7FD4D0] block mb-2">Reminder Title *</label>
-                <input
-                  type="text"
-                  value={reminderTitle}
-                  onChange={(e) => setReminderTitle(e.target.value)}
-                  placeholder="Enter reminder title..."
-                  className="w-full px-3 py-2 border rounded bg-[rgba(101,179,174,0.1)] border-[rgba(101,179,174,0.3)] text-white placeholder-[rgba(255,255,255,0.4)]"
-                  onKeyPress={(e) => e.key === 'Enter' && handleCreateReminder()}
-                />
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <button
-                  onClick={() => {
-                    setReminderModalOpen(false);
-                    setReminderTitle('');
-                    setSelectedReminderDate(null);
-                  }}
-                  className="flex-1 px-4 py-2 rounded-lg border border-[rgba(101,179,174,0.3)] text-[#7FD4D0] font-semibold hover:bg-[rgba(101,179,174,0.1)] transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleCreateReminder}
-                  className="flex-1 px-4 py-2 rounded-lg bg-gradient-to-r from-[#65B3AE] to-[#7FD4D0] text-[#050D20] font-semibold hover:shadow-lg hover:shadow-[#65B3AE]/50 transition"
-                >
-                  Create Reminder
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Logs Modal */}
       {logsModalOpen && (
