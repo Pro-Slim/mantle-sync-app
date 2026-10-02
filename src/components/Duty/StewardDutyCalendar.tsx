@@ -319,7 +319,7 @@ const StewardDutyCalendar: React.FC = () => {
           dates of the month, so a month with five Saturdays shows it. */}
       <div
         className="flex items-center gap-4 px-4 py-2 border-t border-[rgba(101,179,174,0.15)] flex-shrink-0 flex-wrap safe-bottom"
-        title={`${MONTH_NAMES[month.month]} ${month.year}: ${monthTotals.days} days (${weekdayBreakdown}). Counted on UTC dates from the current rota.`}
+        title={`${MONTH_NAMES[month.month]} ${month.year}: ${monthTotals.days} days (${weekdayBreakdown}). Each steward's hours are counted on their own local dates, from the current rota.`}
       >
         <span className="text-[10px] text-[#7FD4D0] opacity-50 uppercase tracking-wider">
           Monthly hours
@@ -347,21 +347,30 @@ const StewardDutyCalendar: React.FC = () => {
           </button>
         </div>
         {STEWARDS.map((s) => (
-          <div key={s.id} className="flex items-center gap-1.5">
+          <div
+            key={s.id}
+            className="flex items-center gap-1.5"
+            title={`${s.label}: counted on ${s.zoneLabel} dates (${formatUtcOffset(s.utcOffsetMinutes)})`}
+          >
             <span className="w-2.5 h-2.5 rounded-sm" style={{ background: s.color }} />
             <span className="text-xs font-semibold" style={{ color: s.color }}>
               {s.label}
             </span>
             <span className="text-xs text-white font-semibold tabular-nums">{monthTotals.totals[s.id]}h</span>
+            <span className="text-[10px] text-[#7FD4D0] opacity-50">
+              {s.zoneLabel === formatUtcOffset(s.utcOffsetMinutes)
+                ? s.zoneLabel
+                : `${s.zoneLabel} ${formatUtcOffset(s.utcOffsetMinutes)}`}
+            </span>
           </div>
         ))}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5" title="Idle hours belong to nobody; counted on UTC dates">
           <span className="w-2.5 h-2.5 rounded-sm opacity-40" style={{ background: IDLE_COLOR }} />
           <span className="text-xs text-[#7FD4D0] opacity-60">Idle</span>
           <span className="text-xs text-[#7FD4D0] opacity-60 tabular-nums">{monthTotals.totals.IDLE}h</span>
         </div>
         <span className="text-[10px] text-[#7FD4D0] opacity-40 ml-auto">
-          {monthTotals.days} days · UTC dates
+          {monthTotals.days} days · each on own local dates
         </span>
       </div>
     </div>

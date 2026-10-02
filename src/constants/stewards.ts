@@ -5,14 +5,21 @@ export interface Steward {
   id: StewardId;
   label: string;
   color: string;
+  // Where the steward lives, as a fixed offset from UTC in whole hours. Their
+  // monthly hours are counted on their own calendar, so this is what decides
+  // which month a shift near midnight on the 1st belongs to.
+  utcOffsetMinutes: number;
+  zoneLabel: string;
 }
 
 // Hues borrowed from the campaign category palette in utils/colorHelpers, kept
 // clear of the teal the app's own chrome is painted in.
+// None of these zones observes daylight saving (Brazil dropped it in 2019,
+// most of Mexico in 2022), so a fixed offset is exact all year.
 export const STEWARDS: Steward[] = [
-  { id: 'HADUKEM', label: 'HADUKEM', color: '#9D4EDD' },
-  { id: 'LUISMA', label: 'LUISMA', color: '#00D4FF' },
-  { id: 'SLIM', label: 'SlimOnShark', color: '#FFB703' },
+  { id: 'HADUKEM', label: 'HADUKEM', color: '#9D4EDD', utcOffsetMinutes: -180, zoneLabel: 'Brazil' },
+  { id: 'LUISMA', label: 'LUISMA', color: '#00D4FF', utcOffsetMinutes: -360, zoneLabel: 'Mexico' },
+  { id: 'SLIM', label: 'SlimOnShark', color: '#FFB703', utcOffsetMinutes: 180, zoneLabel: 'UTC+3' },
 ];
 
 export const IDLE_COLOR = '#5A6B7A';
@@ -92,19 +99,42 @@ export interface MonthHours {
   weekdayCounts: number[];
 }
 
-// Hours each steward is rostered in a calendar month, counted day by day from
-// the weekly ROTA. The month runs on UTC dates because the rota is defined in
-// UTC: a shift crossing UTC midnight on the 31st is split across both months.
+const HOUR_MS = 60 * 60 * 1000;
+
+// Rostered hours of one slot falling inside a calendar month as seen from a
+// given UTC offset: the month's local midnight boundaries, converted to UTC
+// instants, walked an hour at a time against the UTC rota.
+const hoursInMonthAt = (slot: DutySlot, offsetMinutes: number, year: number, month: number): number => {
+  const start = Date.UTC(year, month, 1) - offsetMinutes * 60 * 1000;
+  const end = Date.UTC(year, month + 1, 1) - offsetMinutes * 60 * 1000;
+  let hours = 0;
+  for (let t = start; t < end; t += HOUR_MS) {
+    const instant = new Date(t);
+    if (dutyAt((instant.getUTCDay() + 6) % 7, instant.getUTCHours()) === slot) hours++;
+  }
+  return hours;
+};
+
+// Hours each steward is rostered in a calendar month, for invoicing. Each
+// steward's month runs on their own local dates, so an evening shift that
+// crosses UTC midnight (Luisma's, in Mexico) is never split between two
+// invoices. Idle hours belong to nobody and are counted on UTC dates.
 export const monthlyHours = (year: number, month: number): MonthHours => {
-  const totals: Record<DutySlot, number> = { HADUKEM: 0, LUISMA: 0, SLIM: 0, IDLE: 0 };
+  const totals: Record<DutySlot, number> = {
+    HADUKEM: 0,
+    LUISMA: 0,
+    SLIM: 0,
+    IDLE: hoursInMonthAt('IDLE', 0, year, month),
+  };
+  for (const steward of STEWARDS) {
+    totals[steward.id] = hoursInMonthAt(steward.id, steward.utcOffsetMinutes, year, month);
+  }
+  // A calendar property, the same in every zone: October has five Thursdays
+  // whether you are in Mexico or Istanbul.
   const weekdayCounts = [0, 0, 0, 0, 0, 0, 0];
   const days = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
   for (let date = 1; date <= days; date++) {
-    const dayIndex = (new Date(Date.UTC(year, month, date)).getUTCDay() + 6) % 7;
-    weekdayCounts[dayIndex]++;
-    for (let hour = 0; hour < 24; hour++) {
-      totals[dutyAt(dayIndex, hour)]++;
-    }
+    weekdayCounts[(new Date(Date.UTC(year, month, date)).getUTCDay() + 6) % 7]++;
   }
   return { totals, days, weekdayCounts };
 };
