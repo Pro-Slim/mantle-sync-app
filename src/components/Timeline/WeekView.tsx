@@ -3,6 +3,7 @@ import { Event } from '../../types';
 import { getCategoryColor, getCategoryLabel } from '../../utils/colorHelpers';
 import { useViewport } from '../../hooks/useViewport';
 import { REMINDER_COLOR, remindersOn } from '../../constants/reminders';
+import { useRecurringReminderStore } from '../../stores/recurringReminderStore';
 import {
   addDays,
   formatDate,
@@ -75,7 +76,11 @@ const WeekView: React.FC<WeekViewProps> = ({
 
   const today = new Date();
   const todayIndex = weekDays.findIndex(day => isSameDay(day, today));
-  const weekReminders = useMemo(() => weekDays.map(day => remindersOn(day)), [weekDays]);
+  const recurringReminders = useRecurringReminderStore(state => state.reminders);
+  const weekReminders = useMemo(
+    () => weekDays.map(day => remindersOn(day, recurringReminders)),
+    [weekDays, recurringReminders]
+  );
 
   return (
     <div
@@ -211,7 +216,7 @@ const WeekView: React.FC<WeekViewProps> = ({
                       }}
                     >
                       <span aria-hidden="true">{occurrence.reminder.icon}</span>
-                      {!isMobile && <span className="ml-1">{occurrence.reminder.shortTitle}</span>}
+                      {!isMobile && <span className="ml-1">{occurrence.reminder.title}</span>}
                     </button>
                   );
                 })}

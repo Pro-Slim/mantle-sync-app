@@ -3,6 +3,7 @@ import { offlineQueue, QueuedAction } from './offlineQueue';
 import { useSyncStatusStore } from '../stores/syncStatusStore';
 import { useEventStore } from '../stores/eventStore';
 import { useReminderStore } from '../stores/reminderStore';
+import { useRecurringReminderStore } from '../stores/recurringReminderStore';
 import { useLogStore } from '../stores/logStore';
 
 const MAX_RETRIES = 3;
@@ -15,6 +16,7 @@ export const syncAll = async (userId: string): Promise<void> => {
   await Promise.all([
     useEventStore.getState().fetchEvents(),
     useReminderStore.getState().fetchReminders(userId),
+    useRecurringReminderStore.getState().fetchReminders(),
     useLogStore.getState().fetchLogs(userId),
   ]);
 };

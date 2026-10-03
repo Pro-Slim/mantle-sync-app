@@ -25,6 +25,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../utils/supabaseClient';
 import { useEventStore } from '../stores/eventStore';
 import { useReminderStore } from '../stores/reminderStore';
+import { useRecurringReminderStore } from '../stores/recurringReminderStore';
 import { useLogStore } from '../stores/logStore';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { useSyncStatusStore } from '../stores/syncStatusStore';
@@ -416,6 +417,7 @@ const Dashboard: React.FC = () => {
     if (user?.id) {
       fetchEvents();
       fetchLogs(user.id);
+      void useRecurringReminderStore.getState().fetchReminders();
     }
   }, [user?.id, fetchEvents, fetchLogs]);
 
@@ -1381,7 +1383,7 @@ const Dashboard: React.FC = () => {
               </button>
             </div>
 
-            <RemindersPanel savedReminders={reminders} onDeleteSaved={handleDeleteReminder} />
+            <RemindersPanel open={sidebarVisible} savedReminders={reminders} onDeleteSaved={handleDeleteReminder} />
 
             {/* Quick Stats */}
             <div data-tutorial="quick-stats" className="mt-8 p-4 rounded-lg bg-white bg-opacity-5 border border-[rgba(101,179,174,0.1)]">

@@ -9,6 +9,7 @@ import {
   TIMELINE_START,
 } from '../../utils/dateHelpers';
 import { REMINDER_COLOR, remindersBetween } from '../../constants/reminders';
+import { useRecurringReminderStore } from '../../stores/recurringReminderStore';
 import EventNode from './EventNode';
 import TodayMarker from './TodayMarker';
 import EventCard from './EventCard';
@@ -146,17 +147,18 @@ const Timeline: React.FC<TimelineProps> = ({
   // Every reminder date across the timeline's span, as a lane under the month
   // labels. Weekly marks are dropped once zoomed out far enough that a week is
   // under ~10px and they would only smear into a line.
+  const recurringReminders = useRecurringReminderStore((state) => state.reminders);
   const reminderMarks = useMemo(() => {
     const weekSpacing = (TIMELINE_WIDTH / getTotalTimelineDays()) * 7;
     const today = startOfDay(new Date());
-    return remindersBetween(TIMELINE_START, TIMELINE_END)
-      .filter((o) => o.reminder.id !== 'weekly-report' || weekSpacing >= 10)
+    return remindersBetween(TIMELINE_START, TIMELINE_END, recurringReminders)
+      .filter((o) => o.reminder.repeat !== 'weekly' || weekSpacing >= 10)
       .map((o) => ({
         ...o,
         x: getPositionFromDate(o.date, TIMELINE_WIDTH) + PADDING,
         past: o.date < today,
       }));
-  }, [TIMELINE_WIDTH, PADDING]);
+  }, [TIMELINE_WIDTH, PADDING, recurringReminders]);
   const REMINDER_LANE_Y = LINE_Y + 68;
 
   const activeEvents = events.filter(
@@ -255,7 +257,7 @@ const Timeline: React.FC<TimelineProps> = ({
               monthly stats; past dates dimmed. */}
           {showReminders && <g>
             {reminderMarks.map((mark) => {
-              const isMonthly = mark.reminder.id === 'monthly-stats';
+              const isMonthly = mark.reminder.repeat === 'monthly';
               const size = isMonthly ? 5 : 2.5;
               return (
                 <g

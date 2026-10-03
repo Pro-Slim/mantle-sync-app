@@ -178,7 +178,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'sidebar',
     title: '🔔 Reminders',
-    description: 'The recurring steward tasks and when each is next due: the Weekly Steward Report every Friday, and the member-message stats for the previous month on the 30th (the last day in February). The same reminders show as pink marks on the Week view and the Timeline.',
+    description: 'The recurring steward tasks and when each is next due, such as the Weekly Steward Report every Friday. Add one with + Add reminder (every week on a weekday, or every month on a date), or edit and remove one with its pencil and ×. The list is shared, so everyone sees the same reminders, and they also show as pink marks on the Week view and the Timeline.',
     target: 'aside',
     position: 'right',
     requiresSidebarOpen: true,
