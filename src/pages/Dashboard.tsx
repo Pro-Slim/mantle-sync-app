@@ -3,6 +3,8 @@ import Timeline, { BASE_TIMELINE_WIDTH, TIMELINE_PADDING } from '../components/T
 import WeekView from '../components/Timeline/WeekView';
 import RemindersPanel from '../components/Reminders/RemindersPanel';
 import WeeklyFocusPanel from '../components/Focus/WeeklyFocusPanel';
+import Ribbon from '../components/Ribbon/Ribbon';
+import SpinStage from '../components/SpinWheel/SpinStage';
 import DayCampaignsModal from '../components/Calendar/DayCampaignsModal';
 import EventCountdownClock from '../components/EventCountdownClock';
 import AuthModal from '../components/AuthModal';
@@ -209,6 +211,7 @@ const Dashboard: React.FC = () => {
   const trayRef = useRef<HTMLElement>(null);
   const trayHandleRef = useRef<HTMLButtonElement>(null);
   const [focusVisible, setFocusVisible] = React.useState(false);
+  const [spinOpen, setSpinOpen] = React.useState(false);
   const focusTrayRef = useRef<HTMLElement>(null);
   const focusHandleRef = useRef<HTMLButtonElement>(null);
   // Per-viewer preference, so it lives in this browser rather than the shared
@@ -862,7 +865,7 @@ const Dashboard: React.FC = () => {
       </div>
 
       {/* Header */}
-      <header ref={headerRef} className="mantle-frosted border-b border-[rgba(101,179,174,0.2)] backdrop-blur-md relative z-20">
+      <header ref={headerRef} className="mantle-frosted border-b border-[rgba(101,179,174,0.2)] backdrop-blur-md relative z-[35]">
         <div
           className={`max-w-full flex justify-between items-center safe-x ${
             isMobile ? 'px-3 py-2 gap-2 flex-wrap' : 'px-6 py-4 gap-x-6 gap-y-3 flex-wrap'
@@ -1340,6 +1343,17 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
       </header>
+
+      {/* The ribbon hangs from under the Mantle mark, as ProPrice's does, and
+          brings the decision spin wheel on stage. A sibling of the header so
+          the header (z-35) covers its tucked-up head. */}
+      <Ribbon label="Decision spin wheel" onClick={() => setSpinOpen(true)} />
+      {spinOpen && (
+        <SpinStage
+          onClose={() => setSpinOpen(false)}
+          onResult={({ decision, result }) => void addLog('spin_wheel', `${decision} → ${result}`)}
+        />
+      )}
 
       {/* Calendar pull tab: rides the curtain's trailing edge, same mechanism
           as ProPrice's cart/dues handles, mirrored to the left */}

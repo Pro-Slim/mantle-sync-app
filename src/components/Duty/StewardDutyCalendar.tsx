@@ -131,7 +131,7 @@ const StewardDutyCalendar: React.FC = () => {
   return (
     <div className="h-full flex flex-col">
       {/* Toolbar */}
-      <div className="flex items-center justify-between gap-4 px-4 py-3 border-b border-[rgba(101,179,174,0.15)] flex-shrink-0 flex-wrap">
+      <div className="flex items-center justify-between gap-4 px-4 py-3 border-b border-[rgba(101,179,174,0.15)] flex-shrink-0 flex-wrap ribbon-lane">
         <div className="flex items-center gap-3">
           <span className="text-[#65B3AE] font-bold text-sm tracking-wide">STEWARD SCHEDULE</span>
           <span

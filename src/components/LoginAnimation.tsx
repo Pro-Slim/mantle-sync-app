@@ -4,11 +4,15 @@ import catSvg from '../assets/cat.svg';
 
 interface LoginAnimationProps {
   onComplete: () => void;
+  // At login the show ends on black and the dashboard is revealed after it.
+  // As a curtain-raiser (the spin wheel), it fades out instead, so whatever is
+  // coming on stage underneath is seen arriving during the last second.
+  reveal?: boolean;
 }
 
 const TOTAL_DURATION_MS = 3000;
 
-const LoginAnimation: React.FC<LoginAnimationProps> = ({ onComplete }) => {
+const LoginAnimation: React.FC<LoginAnimationProps> = ({ onComplete, reveal = false }) => {
   useEffect(() => {
     const timer = setTimeout(onComplete, TOTAL_DURATION_MS);
     return () => clearTimeout(timer);
@@ -18,6 +22,9 @@ const LoginAnimation: React.FC<LoginAnimationProps> = ({ onComplete }) => {
     <motion.div
       className="fixed inset-0 bg-black overflow-hidden"
       initial={{ opacity: 1 }}
+      animate={reveal ? { opacity: [1, 1, 0] } : undefined}
+      transition={reveal ? { duration: TOTAL_DURATION_MS / 1000, times: [0, 0.7, 1], ease: 'easeIn' } : undefined}
+      style={reveal ? { pointerEvents: 'none' } : undefined}
     >
       {/* Background with cyberpunk effect */}
       <div className="absolute inset-0 bg-gradient-to-br from-[#050D20] via-[#0a1628] to-[#030407]" />
@@ -149,7 +156,7 @@ const LoginAnimation: React.FC<LoginAnimationProps> = ({ onComplete }) => {
       />
 
       {/* Fade to black before revealing dashboard */}
-      <motion.div
+      {!reveal && <motion.div
         className="absolute inset-0 bg-black"
         initial={{ opacity: 0 }}
         animate={{ opacity: [0, 0, 1] }}
@@ -158,7 +165,7 @@ const LoginAnimation: React.FC<LoginAnimationProps> = ({ onComplete }) => {
           duration: 0.6,
           times: [0, 0.3, 1],
         }}
-      />
+      />}
     </motion.div>
   );
 };

@@ -373,3 +373,35 @@ svg text {
 @media (max-width: 820px) and (orientation: portrait) {
   .rotate-hint { display: flex; }
 }
+/* The hint is the first thing under the header in the Timeline view. */
+.rotate-hint { margin-left: var(--ribbon-lane, 12px); }
+
+/* ---------------------------------------------------------------------------
+   The ribbon
+   The cloth, cord, sheen, sparks and motion are ProPrice's, untouched, in
+   styles/ribbons.css. These rules only say where it hangs in this app.
+--------------------------------------------------------------------------- */
+
+/* It hangs from the header's bottom edge, which Dashboard measures into
+   --calendar-header-h, and is centred under the Mantle mark: the mark is 36px
+   at the header's 24px padding (28px at 12px on a phone). */
+:root {
+  --topbar-h: var(--calendar-header-h, 88px);
+  --ribbon-lane: 66px;
+}
+.ribbon-cta { --ribbon-x: 28px; }
+
+/* Below the reminders tray (30) rather than over it as in ProPrice, where the
+   curtain opens on the other side: here the tray opens under the ribbon, and
+   its heading would sit behind the cloth. Still above the page content (10). */
+.ribbon-cta { z-index: 29; }
+
+/* The first row of each view keeps the ribbon's lane clear: the ribbon's x
+   plus its 28px plus 10px of air, so no button sits under the cloth (which
+   takes the pointer). */
+.ribbon-lane { padding-left: var(--ribbon-lane) !important; }
+
+@media (max-width: 900px) {
+  :root { --ribbon-lane: 50px; }
+  .ribbon-cta { --ribbon-x: 12px; }
+}

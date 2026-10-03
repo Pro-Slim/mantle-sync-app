@@ -1,0 +1,78 @@
+/* The stage the wheel is brought onto: a full-screen layer over the app. */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: #020a24;
+}
+
+/* The wheel rises into place as the light show fades off it. */
+.enter {
+  min-height: 100%;
+  animation: rise 0.9s cubic-bezier(0.2, 0.9, 0.3, 1.15) 1.9s both;
+}
+@keyframes rise {
+  from { opacity: 0; transform: translateY(40px) scale(0.86); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Two spotlights from the top corners sweep in onto the wheel and settle,
+   then breathe; screen-blended so they light the stage, never cover it. */
+.beams { position: fixed; inset: 0; pointer-events: none; z-index: 81; overflow: hidden; }
+.beam {
+  position: absolute;
+  top: -12vh;
+  width: 34vmax;
+  height: 130vh;
+  background: linear-gradient(180deg, rgb(200 245 255 / 0.55) 0%, rgb(127 232 255 / 0.16) 45%, transparent 80%);
+  clip-path: polygon(44% 0, 56% 0, 100% 100%, 0 100%);
+  filter: blur(8px);
+  mix-blend-mode: screen;
+  transform-origin: 50% 0;
+  opacity: 0;
+}
+.left { left: 2vw; animation: sweepLeft 2.6s ease-out 1.6s forwards, breathe 5s ease-in-out 4.2s infinite; }
+.right { right: 2vw; animation: sweepRight 2.6s ease-out 1.6s forwards, breathe 5s ease-in-out 4.6s infinite; }
+@keyframes sweepLeft {
+  0% { opacity: 0; transform: rotate(-58deg); }
+  35% { opacity: 1; }
+  100% { opacity: 0.6; transform: rotate(-24deg); }
+}
+@keyframes sweepRight {
+  0% { opacity: 0; transform: rotate(58deg); }
+  35% { opacity: 1; }
+  100% { opacity: 0.6; transform: rotate(24deg); }
+}
+@keyframes breathe {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 0.35; }
+}
+
+.close {
+  position: fixed;
+  top: calc(12px + env(safe-area-inset-top, 0px));
+  right: 12px;
+  z-index: 82;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid rgb(127 232 255 / 0.45);
+  background: rgb(2 16 56 / 0.7);
+  color: #e9fdff;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+.close:hover { background: rgb(127 232 255 / 0.18); }
+.close:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+.show { position: fixed; inset: 0; z-index: 90; }
+
+@media (prefers-reduced-motion: reduce) {
+  .enter { animation: none; }
+  .left, .right { animation: none; opacity: 0.45; }
+  .left { transform: rotate(-24deg); }
+  .right { transform: rotate(24deg); }
+}

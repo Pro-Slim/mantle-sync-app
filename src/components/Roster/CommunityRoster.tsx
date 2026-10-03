@@ -162,7 +162,7 @@ const CommunityRoster: React.FC = () => {
   return (
     <div className="h-full flex flex-col">
       {/* Toolbar */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-[rgba(101,179,174,0.15)] flex-shrink-0 flex-wrap">
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-[rgba(101,179,174,0.15)] flex-shrink-0 flex-wrap ribbon-lane">
         <span className="text-[#65B3AE] font-bold text-sm tracking-wide">COMMUNITY ADMINS</span>
         {source === 'live' && (
           <span className="text-[11px] text-[#7FD4D0] opacity-60">

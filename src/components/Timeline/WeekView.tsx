@@ -91,7 +91,7 @@ const WeekView: React.FC<WeekViewProps> = ({
       {/* Toolbar. Three items side by side do not fit a phone, so the week
           range leads its own line and the arrows sit under it. */}
       <div
-        className={`border-b border-[rgba(101,179,174,0.15)] flex-shrink-0 ${
+        className={`border-b border-[rgba(101,179,174,0.15)] flex-shrink-0 ribbon-lane ${
           isMobile
             ? 'flex flex-col gap-2 px-3 py-2'
             : 'flex items-center justify-between px-4 py-3'

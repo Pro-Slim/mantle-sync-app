@@ -1,0 +1,214 @@
+/* DecisionSpinWheel — a four-way decision spinner for community calls.
+   A blue prize-wheel stage: everything is drawn (SVG + CSS), every label is
+   real text, and the only thing that moves on a spin is the rotor's transform. */
+
+.stage {
+  --cyan: 127 232 255;
+  --deep: 6 36 102;
+  position: relative;
+  /* The viewport, not 100%: the stage sits in a scrolling overlay whose own
+     height is not definite, and a percentage left the bottom of the window bare. */
+  min-height: 100vh;
+  min-height: 100dvh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 16px calc(24px + env(safe-area-inset-bottom, 0px));
+  box-sizing: border-box;
+  color: #fff;
+  font-family: inherit;
+  /* Darker at the edges, a cyan-blue pool of light behind the wheel. */
+  background:
+    radial-gradient(ellipse 60% 45% at 50% 52%, rgb(56 182 255 / 0.55) 0%, rgb(20 110 220 / 0.35) 38%, transparent 70%),
+    radial-gradient(circle at 50% 50%, #0c4fb4 0%, #072f7d 42%, #04174a 72%, #020a24 100%);
+}
+
+.appLabel {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: rgb(var(--cyan) / 0.75);
+}
+
+/* ---------- the decision card ---------- */
+.card {
+  width: min(460px, 100%);
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: rgb(4 20 64 / 0.72);
+  border: 1px solid rgb(var(--cyan) / 0.35);
+  box-shadow: 0 8px 30px rgb(0 0 0 / 0.35), inset 0 1px 0 rgb(255 255 255 / 0.06);
+}
+
+.cardTitle {
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgb(var(--cyan));
+  margin-bottom: 6px;
+}
+
+.decision {
+  width: 100%;
+  box-sizing: border-box;
+  resize: none;
+  min-height: 2.6em;
+  max-height: 5.2em;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgb(var(--cyan) / 0.3);
+  background: rgb(255 255 255 / 0.06);
+  color: #fff;
+  font: inherit;
+  font-size: 16px; /* 16px keeps iOS from zooming the page on focus */
+  font-weight: 600;
+  line-height: 1.3;
+}
+.decision::placeholder { color: rgb(var(--cyan) / 0.45); font-weight: 500; }
+.decision:focus { outline: none; border-color: rgb(var(--cyan)); box-shadow: 0 0 0 3px rgb(var(--cyan) / 0.18); }
+/* Locked during a spin but still fully legible: the decision is the point. */
+.decision:read-only { opacity: 1; cursor: default; border-color: rgb(var(--cyan) / 0.5); }
+
+.hint { margin-top: 6px; font-size: 12px; color: rgb(255 214 140 / 0.9); }
+
+/* ---------- the wheel ---------- */
+.wheel {
+  position: relative;
+  width: clamp(220px, min(420px, 88vw, calc(100dvh - 340px)), 420px);
+  aspect-ratio: 1;
+  flex: 0 0 auto;
+}
+
+.rotor {
+  position: absolute;
+  inset: 0;
+  transform: rotate(var(--rotation, 0deg));
+  transition: transform var(--spin-ms, 0ms) cubic-bezier(0.33, 1, 0.68, 1); /* ease-out cubic */
+  will-change: transform;
+}
+
+.rotor svg,
+.fixed svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+}
+
+.fixed { position: absolute; inset: 0; pointer-events: none; }
+
+.slice { transition: fill-opacity 0.4s ease, stroke-opacity 0.4s ease; stroke: #fff; stroke-opacity: 0; stroke-width: 3; }
+.sliceDim { fill-opacity: 0.55; }
+.sliceWin { stroke-opacity: 0.95; }
+
+.label {
+  fill: #fff;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  paint-order: stroke;
+  stroke: rgb(2 16 56 / 0.55);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+  transition: opacity 0.4s ease;
+}
+/* The barest amber, so SPIN AGAIN reads as different without leaving blue. */
+.labelAgain { fill: #fff1cf; }
+.labelDim { opacity: 0.6; }
+
+.bulb { fill: #e9fdff; }
+.bulbA, .bulbB { animation: bulb 1.6s ease-in-out infinite; }
+.bulbB { animation-delay: 0.8s; }
+.spinning .bulbA, .spinning .bulbB { animation-duration: 0.36s; }
+.spinning .bulbB { animation-delay: 0.18s; }
+@keyframes bulb {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+
+/* ---------- controls ---------- */
+.spinButton {
+  min-width: 180px;
+  padding: 12px 34px;
+  border: 0;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 18px;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  color: #04174a;
+  background: linear-gradient(180deg, #e9fdff 0%, #8ee9ff 55%, #45c6f5 100%);
+  box-shadow: 0 0 0 3px rgb(var(--cyan) / 0.25), 0 0 26px rgb(var(--cyan) / 0.55), 0 8px 18px rgb(0 0 0 / 0.35);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+}
+.spinButton:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 0 0 3px rgb(var(--cyan) / 0.35), 0 0 34px rgb(var(--cyan) / 0.75), 0 10px 22px rgb(0 0 0 / 0.4); }
+.spinButton:active:not(:disabled) { transform: translateY(1px); }
+.spinButton:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
+.spinButton:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+
+.result {
+  min-height: 3.2em;
+  text-align: center;
+}
+.resultLine { font-size: 22px; font-weight: 900; letter-spacing: 0.06em; text-shadow: 0 0 18px rgb(var(--cyan) / 0.7); }
+.resultFor { margin-top: 2px; font-size: 14px; color: rgb(var(--cyan) / 0.85); overflow-wrap: anywhere; }
+.resultIdle { font-size: 13px; color: rgb(var(--cyan) / 0.55); }
+
+.actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.secondary {
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid rgb(var(--cyan) / 0.55);
+  background: rgb(var(--cyan) / 0.1);
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.secondary:hover { background: rgb(var(--cyan) / 0.2); }
+.secondary:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.quiet { border-color: rgb(255 255 255 / 0.25); background: transparent; color: rgb(255 255 255 / 0.75); }
+
+.confirm {
+  width: min(460px, 100%);
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgb(255 214 140 / 0.5);
+  background: rgb(60 40 4 / 0.35);
+  text-align: center;
+  font-size: 13px;
+}
+.confirm p { margin: 0 0 8px; }
+
+/* ---------- history ---------- */
+.history { width: min(460px, 100%); }
+.historyTitle {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgb(var(--cyan) / 0.55);
+  margin: 0 0 4px;
+}
+.historyList { list-style: none; margin: 0; padding: 0; }
+.historyItem {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 10px;
+  align-items: baseline;
+  padding: 5px 2px;
+  border-top: 1px solid rgb(var(--cyan) / 0.12);
+  font-size: 12px;
+}
+.historyTime { color: rgb(var(--cyan) / 0.6); font-variant-numeric: tabular-nums; }
+.historyDecision { color: rgb(255 255 255 / 0.8); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.historyResult { font-weight: 800; }
+
+@media (prefers-reduced-motion: reduce) {
+  .bulbA, .bulbB { animation: none; }
+}
