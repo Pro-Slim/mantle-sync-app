@@ -955,12 +955,12 @@ const Dashboard: React.FC = () => {
                   scrolling="no"
                   frameBorder="no"
                   allow="autoplay; encrypted-media"
-                  src="https://w.soundcloud.com/player/?url=https%3A//soundcloud.com/markronson/suzanne&color=%23242c2c&auto_play=true&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true"
+                  src="https://w.soundcloud.com/player/?url=https%3A//soundcloud.com/cil-sc/bloodsucker&color=%23242c2c&auto_play=true&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true"
                 />
                 <div className="text-[10px] text-[#7FD4D0] mt-1 truncate">
-                  <a href="https://soundcloud.com/markronson" target="_blank" rel="noreferrer" className="hover:underline">Mark Ronson</a>
+                  <a href="https://soundcloud.com/cil-sc" target="_blank" rel="noreferrer" className="hover:underline">Cil</a>
                   {' · '}
-                  <a href="https://soundcloud.com/markronson/suzanne" target="_blank" rel="noreferrer" className="hover:underline">Suzanne</a>
+                  <a href="https://soundcloud.com/cil-sc/bloodsucker" target="_blank" rel="noreferrer" className="hover:underline">Bloodsucker</a>
                 </div>
               </div>
               {logoMusicMinimized && (
