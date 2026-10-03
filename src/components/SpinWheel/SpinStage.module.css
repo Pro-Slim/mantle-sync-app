@@ -33,8 +33,9 @@
   transform-origin: 50% 0;
   opacity: 0;
 }
-.left { left: 2vw; animation: sweepLeft 2.6s ease-out 1.6s forwards, breathe 5s ease-in-out 4.2s infinite; }
-.right { right: 2vw; animation: sweepRight 2.6s ease-out 1.6s forwards, breathe 5s ease-in-out 4.6s infinite; }
+.beams { --beam-delay: 1.6s; }
+.left { left: 2vw; animation: sweepLeft 2.6s ease-out var(--beam-delay) forwards, breathe 5s ease-in-out calc(var(--beam-delay) + 2.6s) infinite; }
+.right { right: 2vw; animation: sweepRight 2.6s ease-out var(--beam-delay) forwards, breathe 5s ease-in-out calc(var(--beam-delay) + 3s) infinite; }
 @keyframes sweepLeft {
   0% { opacity: 0; transform: rotate(-58deg); }
   35% { opacity: 1; }
@@ -70,7 +71,58 @@
 
 .show { position: fixed; inset: 0; z-index: 90; }
 
+/* ---------- on the page ----------
+   The app stays where it is, blurred and dimmed behind; the wheel swings out
+   of the ribbon into the middle like a sign on a hook, and settles. */
+.pageOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3vh 3vw;
+  box-sizing: border-box;
+  background: rgb(2 10 36 / 0.45);
+  backdrop-filter: blur(10px) saturate(1.1);
+  -webkit-backdrop-filter: blur(10px) saturate(1.1);
+  animation: fadeIn 0.25s ease-out both;
+}
+.fadeOut { animation: fadeOutBackdrop 0.32s ease-in forwards; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fadeOutBackdrop { from { opacity: 1; } to { opacity: 0; } }
+
+/* It hangs from its top centre: the point that leaves the ribbon and the
+   pivot it swings about once it arrives. */
+.hang { position: relative; transform-origin: 50% 0; }
+.pending { opacity: 0; }
+
+/* One transform list in every frame (translate, scale, rotate), so the
+   browser interpolates the swing rather than decomposing matrices. */
+.swingIn { animation: swingIn 1.25s cubic-bezier(0.25, 0.8, 0.3, 1) both; }
+@keyframes swingIn {
+  0%   { opacity: 0; transform: translate(var(--from-x), var(--from-y)) scale(0.1) rotate(-40deg); }
+  12%  { opacity: 1; }
+  48%  { opacity: 1; transform: translate(0, 0) scale(1.03) rotate(13deg); }
+  64%  { transform: translate(0, 0) scale(1) rotate(-7deg); }
+  78%  { transform: translate(0, 0) scale(1) rotate(3.5deg); }
+  90%  { transform: translate(0, 0) scale(1) rotate(-1.4deg); }
+  100% { opacity: 1; transform: translate(0, 0) scale(1) rotate(0deg); }
+}
+.swingOut { animation: swingOut 0.32s cubic-bezier(0.5, 0, 0.75, 0) forwards; }
+@keyframes swingOut {
+  from { opacity: 1; transform: translate(0, 0) scale(1) rotate(0deg); }
+  to   { opacity: 0; transform: translate(var(--from-x), var(--from-y)) scale(0.1) rotate(-30deg); }
+}
+
+/* The close button rides on the card's corner, outside its scroll. */
+.cardClose { position: absolute; top: 10px; right: 10px; z-index: 2; }
+
+/* On the page the lights come up with the swing, not after a show. */
+.beamsOnPage { --beam-delay: 0.15s; }
+
 @media (prefers-reduced-motion: reduce) {
+  .pageOverlay, .fadeOut, .swingIn, .swingOut { animation: none; }
   .enter { animation: none; }
   .left, .right { animation: none; opacity: 0.45; }
   .left { transform: rotate(-24deg); }

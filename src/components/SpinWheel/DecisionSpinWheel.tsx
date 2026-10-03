@@ -12,8 +12,9 @@
  *     }
  *   />
  *
- * `participants` defaults to SLIMONSHARK, LUISMA, HADUKEM and
- * "MINH - SPIN AGAIN"; each slice has exactly the same chance.
+ * `participants` defaults to SLIMONSHARK, LUISMA, HADUKEM and SPIN AGAIN, each
+ * with exactly the same chance; `centerLabel` (MINH) sits in the hub. Pass
+ * `variant="card"` to show it as a card over the page rather than a full stage.
  */
 import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
 import styles from './DecisionSpinWheel.module.css';
@@ -27,11 +28,17 @@ export interface SpinResultPayload {
 export interface DecisionSpinWheelProps {
   participants?: string[];
   onResult?: (payload: SpinResultPayload) => void;
+  // The name in the hub: the one doing the spinning, who is not on the wheel.
+  centerLabel?: string;
+  // 'page' fills the screen with the blue stage; 'card' is a self-contained
+  // card for showing over the app.
+  variant?: 'page' | 'card';
+  onSpinningChange?: (spinning: boolean) => void;
 }
 
 type HistoryEntry = SpinResultPayload;
 
-const DEFAULT_PARTICIPANTS = ['SLIMONSHARK', 'LUISMA', 'HADUKEM', 'MINH - SPIN AGAIN'];
+const DEFAULT_PARTICIPANTS = ['SLIMONSHARK', 'LUISMA', 'HADUKEM', 'SPIN AGAIN'];
 const HISTORY_KEY = 'mantle-sync-spin-history';
 const HISTORY_LIMIT = 5;
 
@@ -46,8 +53,8 @@ const LABEL_OUTER = SLICE_R - 14;
 const BULBS = 16;
 
 const isSpinAgain = (label: string): boolean => /spin again/i.test(label);
-// "MINH - SPIN AGAIN" lands as "SPIN AGAIN": the slice names who it is, the
-// result says what to do.
+// A slice named like "MINH - SPIN AGAIN" lands as plain "SPIN AGAIN": the
+// result says what to do next.
 const resultText = (label: string): string => (isSpinAgain(label) ? 'SPIN AGAIN' : label);
 
 const mod = (n: number, m: number): number => ((n % m) + m) % m;
@@ -102,6 +109,9 @@ const prefersReducedMotion = (): boolean =>
 const DecisionSpinWheel: React.FC<DecisionSpinWheelProps> = ({
   participants = DEFAULT_PARTICIPANTS,
   onResult,
+  centerLabel = 'MINH',
+  variant = 'page',
+  onSpinningChange,
 }) => {
   const inputId = useId();
   const hintId = useId();
@@ -117,6 +127,14 @@ const DecisionSpinWheel: React.FC<DecisionSpinWheelProps> = ({
 
   useEffect(() => () => window.clearTimeout(timer.current), []);
 
+  // Held in a ref so a host passing an inline callback does not re-fire this
+  // on every render.
+  const spinningListener = useRef(onSpinningChange);
+  spinningListener.current = onSpinningChange;
+  useEffect(() => {
+    spinningListener.current?.(spinning);
+  }, [spinning]);
+
   const n = participants.length;
   const sliceDeg = 360 / n;
   const hasDecision = decision.trim().length > 0;
@@ -131,6 +149,9 @@ const DecisionSpinWheel: React.FC<DecisionSpinWheelProps> = ({
     const longest = Math.max(...labels.flat().map((line) => line.length));
     return Math.max(11, Math.min(24, (LABEL_OUTER - LABEL_INNER) / (longest * 0.68)));
   }, [labels]);
+
+  // Sized to sit inside the hub (72 units across) with a margin either side.
+  const hubFontSize = Math.max(9, Math.min(18, 56 / (Math.max(1, centerLabel.length) * 0.72)));
 
   const spin = () => {
     const text = decision.trim();
@@ -186,7 +207,9 @@ const DecisionSpinWheel: React.FC<DecisionSpinWheelProps> = ({
   };
 
   return (
-    <div className={`${styles.stage} ${spinning ? styles.spinning : ''}`}>
+    <div
+      className={`${styles.stage} ${variant === 'card' ? styles.asCard : ''} ${spinning ? styles.spinning : ''}`}
+    >
       <div className={styles.appLabel}>MantleSynchApp</div>
 
       <div className={styles.card}>
@@ -220,7 +243,9 @@ const DecisionSpinWheel: React.FC<DecisionSpinWheelProps> = ({
           <svg
             viewBox={`0 0 ${SIZE} ${SIZE}`}
             role="img"
-            aria-label={`Wheel with ${n} equal slices: ${participants.join(', ')}`}
+            aria-label={`Wheel with ${n} equal slices: ${participants.join(', ')}${
+              centerLabel ? `, with ${centerLabel} in the centre` : ''
+            }`}
           >
             <defs>
               <radialGradient id="dsw-light" cx="50%" cy="50%" r="50%">
@@ -343,7 +368,20 @@ const DecisionSpinWheel: React.FC<DecisionSpinWheelProps> = ({
             })}
 
             <circle cx={C} cy={C} r={HUB_R} fill="url(#dsw-hub)" stroke="#bff3ff" strokeOpacity={0.6} strokeWidth={2} />
-            <ellipse cx={C - 9} cy={C - 12} rx={13} ry={8} fill="#fff" fillOpacity={0.28} />
+            {/* The highlight sits high on the hub so it never runs under the name. */}
+            <ellipse cx={C - 10} cy={C - 22} rx={12} ry={5.5} fill="#fff" fillOpacity={0.3} />
+            {centerLabel && (
+              <text
+                x={C}
+                y={C + 1}
+                textAnchor="middle"
+                dominantBaseline="central"
+                fontSize={hubFontSize}
+                className={styles.hubLabel}
+              >
+                {centerLabel}
+              </text>
+            )}
 
             <polygon
               points={`${C - 15},${C - RING_R - 14} ${C + 15},${C - RING_R - 14} ${C},${C - SLICE_R + 22}`}

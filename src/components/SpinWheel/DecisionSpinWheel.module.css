@@ -115,6 +115,17 @@
   stroke-linejoin: round;
   transition: opacity 0.4s ease;
 }
+/* The name in the hub stays upright: it lives on the fixed layer, not the rotor. */
+.hubLabel {
+  fill: #fff;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  paint-order: stroke;
+  stroke: rgb(2 16 56 / 0.6);
+  stroke-width: 3px;
+  stroke-linejoin: round;
+}
+
 /* The barest amber, so SPIN AGAIN reads as different without leaving blue. */
 .labelAgain { fill: #fff1cf; }
 .labelDim { opacity: 0.6; }
@@ -208,6 +219,24 @@
 .historyTime { color: rgb(var(--cyan) / 0.6); font-variant-numeric: tabular-nums; }
 .historyDecision { color: rgb(255 255 255 / 0.8); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .historyResult { font-weight: 800; }
+
+/* ---------- the card variant ----------
+   The same wheel as a card over the app: its own blue pool of light, a frame,
+   and its own scroll when the window is short, instead of a full stage. */
+.asCard {
+  min-height: 0;
+  width: min(520px, 94vw);
+  max-height: 92vh;
+  max-height: 92dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  gap: 10px;
+  padding: 14px 16px 18px;
+  border-radius: 22px;
+  border: 1px solid rgb(var(--cyan) / 0.35);
+  box-shadow: 0 30px 80px rgb(0 0 0 / 0.55), 0 0 60px rgb(56 182 255 / 0.25);
+}
+.asCard .wheel { width: clamp(200px, min(360px, 82vw, calc(100dvh - 430px)), 360px); }
 
 @media (prefers-reduced-motion: reduce) {
   .bulbA, .bulbB { animation: none; }

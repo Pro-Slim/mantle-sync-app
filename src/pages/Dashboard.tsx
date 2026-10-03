@@ -232,6 +232,25 @@ const Dashboard: React.FC = () => {
       // Preference just won't survive a reload.
     }
   };
+  // Where the ribbon brings the spin wheel: off (the default) is the original
+  // full-screen stage with the light show; on swings it into the middle of the
+  // page over a blurred dashboard. Per browser, like the toggle above.
+  const [wheelOnPage, setWheelOnPage] = React.useState(() => {
+    try {
+      return localStorage.getItem('mantle-sync-wheel-on-page') === 'on';
+    } catch {
+      return false;
+    }
+  });
+  const toggleWheelOnPage = () => {
+    const next = !wheelOnPage;
+    setWheelOnPage(next);
+    try {
+      localStorage.setItem('mantle-sync-wheel-on-page', next ? 'on' : 'off');
+    } catch {
+      // Preference just won't survive a reload.
+    }
+  };
   const [soundMuted, setSoundMutedState] = React.useState(() => isSoundMuted());
   const [sidebarVisible, setSidebarVisible] = React.useState(false);
   const [countdownClocks, setCountdownClocks] = React.useState<CountdownClockState[]>([]);
@@ -1064,6 +1083,24 @@ const Dashboard: React.FC = () => {
                       Hover {hoverEnabled ? 'ON' : 'OFF'}
                     </button>
 
+                    {/* Spin wheel mode toggle */}
+                    <button
+                      onClick={toggleWheelOnPage}
+                      className={`w-full px-4 py-2 rounded-lg text-left font-semibold text-sm transition-all flex items-center gap-3 ${
+                        wheelOnPage
+                          ? 'text-[#7FD4D0] hover:bg-[#65B3AE] hover:bg-opacity-20'
+                          : 'text-[rgba(255,255,255,0.5)] hover:bg-[rgba(255,255,255,0.1)]'
+                      }`}
+                      title="ON: the spin wheel swings onto the main page over a blurred background. OFF: it opens on its own full-screen stage with the light show."
+                    >
+                      <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" style={{ color: wheelOnPage ? '#7FE8FF' : 'rgba(255,255,255,0.5)' }}>
+                        <circle cx="12" cy="12" r="9" />
+                        <path d="M12 3v18M3 12h18" />
+                        <circle cx="12" cy="12" r="2.5" fill="currentColor" />
+                      </svg>
+                      Wheel on main page {wheelOnPage ? 'ON' : 'OFF'}
+                    </button>
+
                     {/* Timeline reminders toggle */}
                     <button
                       onClick={toggleTimelineReminders}
@@ -1350,6 +1387,7 @@ const Dashboard: React.FC = () => {
       <Ribbon label="Decision spin wheel" onClick={() => setSpinOpen(true)} />
       {spinOpen && (
         <SpinStage
+          mode={wheelOnPage ? 'page' : 'stage'}
           onClose={() => setSpinOpen(false)}
           onResult={({ decision, result }) => void addLog('spin_wheel', `${decision} → ${result}`)}
         />
