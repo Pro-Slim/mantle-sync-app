@@ -122,7 +122,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
   {
     id: 'main-view',
     title: '🗓️ Week, Timeline, Steward Schedule, Groups TG, DC & X',
-    description: 'The main view opens on the weekly layout: seven days, each showing how many campaigns are active on it. A campaign running 1–30 August is active on every one of those days, so it appears across all of them. Pink chips mark the reminders due that week. Click a day for its campaign list, or a campaign bar for its full details. Steward Schedule shows who is on duty and the monthly hours per steward. Groups TG, DC & X lists every Mantle Telegram group and Discord server with its owner, admins and bots, and marks where MINH, SlimOnShark, LUISMA or HADUKEM is not admin yet.',
+    description: 'The main view opens on the weekly layout: seven days, each showing how many campaigns are active on it. A campaign running 1–30 August is active on every one of those days, so it appears across all of them. Pink chips mark the reminders due that week. Click a day for its campaign list, or a campaign bar for its full details. Steward Schedule shows who is on duty and the monthly hours per steward. Groups TG, DC & X lists every Mantle Telegram group and Discord server with its owner, admins and bots, and marks where MINH, SLIMONSHARK, LUISMA or HADUKEM is not admin yet.',
     target: '[data-tutorial="main-view-toggle"]',
     position: 'bottom',
   },

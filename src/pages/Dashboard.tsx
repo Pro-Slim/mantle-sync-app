@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect, useMemo } from 'react';
 import Timeline, { BASE_TIMELINE_WIDTH, TIMELINE_PADDING } from '../components/Timeline/Timeline';
 import WeekView from '../components/Timeline/WeekView';
 import RemindersPanel from '../components/Reminders/RemindersPanel';
+import WeeklyFocusPanel from '../components/Focus/WeeklyFocusPanel';
 import DayCampaignsModal from '../components/Calendar/DayCampaignsModal';
 import EventCountdownClock from '../components/EventCountdownClock';
 import AuthModal from '../components/AuthModal';
@@ -206,6 +207,9 @@ const Dashboard: React.FC = () => {
   const [tutorialOpen, setTutorialOpen] = React.useState(false);
   const trayRef = useRef<HTMLElement>(null);
   const trayHandleRef = useRef<HTMLButtonElement>(null);
+  const [focusVisible, setFocusVisible] = React.useState(false);
+  const focusTrayRef = useRef<HTMLElement>(null);
+  const focusHandleRef = useRef<HTMLButtonElement>(null);
   // Per-viewer preference, so it lives in this browser rather than the shared
   // database; a blocked localStorage just means the default (shown).
   const [showTimelineReminders, setShowTimelineReminders] = React.useState(() => {
@@ -496,6 +500,19 @@ const Dashboard: React.FC = () => {
     document.addEventListener('pointerdown', closeOnOutside);
     return () => document.removeEventListener('pointerdown', closeOnOutside);
   }, [sidebarVisible, tutorialOpen]);
+
+  // The weekly-focus tray closes the same way. Its note saves on blur, which
+  // the outside press triggers, so closing never loses what was typed.
+  useEffect(() => {
+    if (!focusVisible || tutorialOpen) return;
+    const closeOnOutside = (e: PointerEvent) => {
+      const target = e.target as Element;
+      if (focusTrayRef.current?.contains(target) || focusHandleRef.current?.contains(target)) return;
+      setFocusVisible(false);
+    };
+    document.addEventListener('pointerdown', closeOnOutside);
+    return () => document.removeEventListener('pointerdown', closeOnOutside);
+  }, [focusVisible, tutorialOpen]);
 
   // Close the Settings dropdown when clicking outside it
   useEffect(() => {
@@ -1494,6 +1511,40 @@ const Dashboard: React.FC = () => {
                 className="hidden"
               />
             </div>
+      </aside>
+
+      {/* Weekly focus: the right-hand pull tab and curtain, mirroring the
+          reminders tray on the left. */}
+      <button
+        ref={focusHandleRef}
+        onClick={() => setFocusVisible(!focusVisible)}
+        className={`focus-tray-handle ${!focusVisible ? 'tray-collapsed-handle' : ''}`}
+        aria-expanded={focusVisible}
+        aria-controls="focus-tray"
+        title={focusVisible ? 'Hide the weekly focus' : "Show this week's focus"}
+      >
+        <span className="tray-handle-arrow" aria-hidden="true">‹</span>
+      </button>
+      <aside
+        ref={focusTrayRef}
+        id="focus-tray"
+        aria-hidden={!focusVisible}
+        className={`focus-tray mantle-frosted p-6 flex flex-col ${!focusVisible ? 'tray-collapsed' : ''}`}
+      >
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="font-bold text-white flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-[#65B3AE]" />
+            Weekly Focus
+          </h2>
+          <button
+            onClick={() => setFocusVisible(false)}
+            className="w-7 h-7 flex items-center justify-center rounded-lg text-[#65B3AE] hover:bg-[rgba(101,179,174,0.15)] transition-all font-bold"
+            title="Hide the weekly focus"
+          >
+            ›
+          </button>
+        </div>
+        <WeeklyFocusPanel open={focusVisible} />
       </aside>
 
       {/* Main Content */}

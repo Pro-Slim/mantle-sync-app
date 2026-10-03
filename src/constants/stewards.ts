@@ -19,7 +19,7 @@ export interface Steward {
 export const STEWARDS: Steward[] = [
   { id: 'HADUKEM', label: 'HADUKEM', color: '#9D4EDD', utcOffsetMinutes: -180, zoneLabel: 'Brazil' },
   { id: 'LUISMA', label: 'LUISMA', color: '#00D4FF', utcOffsetMinutes: -360, zoneLabel: 'Mexico' },
-  { id: 'SLIM', label: 'SlimOnShark', color: '#FFB703', utcOffsetMinutes: 180, zoneLabel: 'UTC+3' },
+  { id: 'SLIM', label: 'SLIMONSHARK', color: '#FFB703', utcOffsetMinutes: 180, zoneLabel: 'UTC+3' },
 ];
 
 export const IDLE_COLOR = '#5A6B7A';

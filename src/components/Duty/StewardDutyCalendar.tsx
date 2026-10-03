@@ -21,6 +21,8 @@ interface Zone {
   id: string;
   minutes: number;
   label?: string;
+  // Shown in the tooltip only, so the button reads like its UTC neighbours.
+  place?: string;
 }
 
 // The printed rota carries UTC-6 and UTC-3 beside UTC because that is where the
@@ -30,7 +32,7 @@ const buildZones = (): Zone[] => [
   { id: 'utc', minutes: 0 },
   { id: 'utc-3', minutes: -180 },
   { id: 'utc-6', minutes: -360 },
-  { id: 'sgt', minutes: 480, label: 'Singapore' },
+  { id: 'sgt', minutes: 480, place: 'Singapore' },
   { id: 'local', minutes: -new Date().getTimezoneOffset(), label: 'Local' },
 ];
 
@@ -169,7 +171,7 @@ const StewardDutyCalendar: React.FC = () => {
                 setZoneId(z.id);
                 storeZone(z.id);
               }}
-              title={`Label the hour column in ${z.label ? `${z.label} time, ` : ''}${formatUtcOffset(z.minutes)}`}
+              title={`Label the hour column in ${z.place ?? z.label ? `${z.place ?? z.label} time, ` : ''}${formatUtcOffset(z.minutes)}`}
               className={`px-2.5 py-1 rounded-md text-xs font-semibold transition-all ${
                 zone.id === z.id
                   ? 'bg-[#65B3AE] text-[#050D20]'

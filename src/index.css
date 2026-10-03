@@ -253,8 +253,59 @@ svg text {
   transform: rotate(180deg);
 }
 
+/* The weekly-focus curtain: the reminders tray mirrored onto the right edge. */
+.focus-tray {
+  position: fixed; right: 0; top: var(--calendar-header-h, 88px); bottom: 0; z-index: 30;
+  width: var(--calendar-tray-w); overflow-y: auto; overscroll-behavior: contain;
+  border-radius: 12px 0 0 12px;
+  transform: translateX(0);
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.35);
+  transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.32s ease, visibility 0s;
+}
+
+.focus-tray.tray-collapsed {
+  transform: translateX(100%);
+  box-shadow: none;
+  visibility: hidden;
+  transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.32s ease, visibility 0s 0.32s;
+}
+
+.focus-tray-handle {
+  position: fixed; right: 0; top: 50%; z-index: 31;
+  display: flex; align-items: center; justify-content: center;
+  padding: 16px 6px; cursor: pointer;
+  background: rgba(5, 13, 32, 0.85);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+  color: var(--mantle-teal);
+  border: 1px solid rgba(101, 179, 174, 0.4); border-right: none;
+  border-radius: 10px 0 0 10px;
+  box-shadow: -3px 0 16px rgba(101, 179, 174, 0.15);
+  transform: translate(0, -50%);
+  transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1), background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease, color 0.15s ease;
+}
+
+.focus-tray-handle:not(.tray-collapsed-handle) {
+  transform: translate(calc(-1 * var(--calendar-tray-w)), -50%);
+}
+
+.focus-tray-handle:hover {
+  background: rgba(101, 179, 174, 0.15);
+  border-color: rgba(101, 179, 174, 0.7);
+  box-shadow: -4px 0 22px rgba(101, 179, 174, 0.3);
+  color: var(--mantle-teal-light);
+}
+
+.focus-tray-handle .tray-handle-arrow {
+  font-size: 16px; font-weight: 700; line-height: 1; transition: transform 0.32s ease;
+}
+
+.focus-tray-handle:not(.tray-collapsed-handle) .tray-handle-arrow {
+  transform: rotate(180deg);
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .calendar-tray, .calendar-tray-handle, .calendar-tray-handle .tray-handle-arrow {
+  .calendar-tray, .calendar-tray-handle, .calendar-tray-handle .tray-handle-arrow,
+  .focus-tray, .focus-tray-handle, .focus-tray-handle .tray-handle-arrow {
     transition: none;
   }
 }
