@@ -204,6 +204,26 @@ const Dashboard: React.FC = () => {
   const [showAddModal, setShowAddModal] = React.useState(false);
   const [showAdminPanel, setShowAdminPanel] = React.useState(false);
   const [tutorialOpen, setTutorialOpen] = React.useState(false);
+  const trayRef = useRef<HTMLElement>(null);
+  const trayHandleRef = useRef<HTMLButtonElement>(null);
+  // Per-viewer preference, so it lives in this browser rather than the shared
+  // database; a blocked localStorage just means the default (shown).
+  const [showTimelineReminders, setShowTimelineReminders] = React.useState(() => {
+    try {
+      return localStorage.getItem('mantle-sync-timeline-reminders') !== 'off';
+    } catch {
+      return true;
+    }
+  });
+  const toggleTimelineReminders = () => {
+    const next = !showTimelineReminders;
+    setShowTimelineReminders(next);
+    try {
+      localStorage.setItem('mantle-sync-timeline-reminders', next ? 'on' : 'off');
+    } catch {
+      // Preference just won't survive a reload.
+    }
+  };
   const [soundMuted, setSoundMutedState] = React.useState(() => isSoundMuted());
   const [sidebarVisible, setSidebarVisible] = React.useState(false);
   const [countdownClocks, setCountdownClocks] = React.useState<CountdownClockState[]>([]);
@@ -461,6 +481,21 @@ const Dashboard: React.FC = () => {
     if (timelineHeightPinned) return;
     setTimelineHeight(paneHeightFor(viewport.height));
   }, [viewport.height, viewport.width, timelineHeightPinned]);
+
+  // A press anywhere outside the open tray closes it. Not while the tutorial
+  // runs (it opens the tray itself and its own buttons sit outside it), and not
+  // on the reminder chips and marks, whose job is to open it.
+  useEffect(() => {
+    if (!sidebarVisible || tutorialOpen) return;
+    const closeOnOutside = (e: PointerEvent) => {
+      const target = e.target as Element;
+      if (trayRef.current?.contains(target) || trayHandleRef.current?.contains(target)) return;
+      if (target.closest?.('[data-opens-tray]')) return;
+      setSidebarVisible(false);
+    };
+    document.addEventListener('pointerdown', closeOnOutside);
+    return () => document.removeEventListener('pointerdown', closeOnOutside);
+  }, [sidebarVisible, tutorialOpen]);
 
   // Close the Settings dropdown when clicking outside it
   useEffect(() => {
@@ -1007,6 +1042,22 @@ const Dashboard: React.FC = () => {
                       Hover {hoverEnabled ? 'ON' : 'OFF'}
                     </button>
 
+                    {/* Timeline reminders toggle */}
+                    <button
+                      onClick={toggleTimelineReminders}
+                      className={`w-full px-4 py-2 rounded-lg text-left font-semibold text-sm transition-all flex items-center gap-3 ${
+                        showTimelineReminders
+                          ? 'text-[#7FD4D0] hover:bg-[#65B3AE] hover:bg-opacity-20'
+                          : 'text-[rgba(255,255,255,0.5)] hover:bg-[rgba(255,255,255,0.1)]'
+                      }`}
+                      title="Show or hide the reminder marks on the Timeline"
+                    >
+                      <svg viewBox="0 0 24 24" className="w-5 h-5" fill="currentColor" style={{ color: showTimelineReminders ? '#F472B6' : 'rgba(255,255,255,0.5)' }}>
+                        <path d="M12 22a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2zm6-6V11a6 6 0 0 0-5-5.91V4a1 1 0 0 0-2 0v1.09A6 6 0 0 0 6 11v5l-2 2v1h16v-1l-2-2z" />
+                      </svg>
+                      Timeline reminders {showTimelineReminders ? 'ON' : 'OFF'}
+                    </button>
+
                     {/* View Mode Toggle */}
                     <button
                       data-tutorial="view-mode-toggle"
@@ -1224,7 +1275,7 @@ const Dashboard: React.FC = () => {
                 { mode: 'week' as const, label: 'Week', hint: 'Weekly layout: active campaigns per day' },
                 { mode: 'timeline' as const, label: 'Timeline', hint: 'Horizontal timeline across the year' },
                 { mode: 'duty' as const, label: 'Steward Schedule', hint: 'Who is on duty each hour, with a live cursor on the current UTC hour and monthly hours per steward' },
-                { mode: 'admins' as const, label: 'Groups TG, DC & X', hint: 'Who is owner, admin or bot in each Mantle Telegram / Discord group, and where our stewards are missing' },
+                { mode: 'admins' as const, label: 'Groups TG, DC & X', hint: 'Who is owner, admin or bot in each Mantle Telegram group, Discord server, X community and X account, and where our stewards are missing' },
               ]).map(({ mode, label, hint }) => (
                 <button
                   key={mode}
@@ -1274,6 +1325,7 @@ const Dashboard: React.FC = () => {
       {/* Calendar pull tab: rides the curtain's trailing edge, same mechanism
           as ProPrice's cart/dues handles, mirrored to the left */}
       <button
+        ref={trayHandleRef}
         data-tutorial="calendar-tab"
         onClick={() => setSidebarVisible(!sidebarVisible)}
         className={`calendar-tray-handle ${!sidebarVisible ? 'tray-collapsed-handle' : ''}`}
@@ -1292,6 +1344,7 @@ const Dashboard: React.FC = () => {
           Content's z-10 stacking context, where it would lose to any later
           sibling regardless of its own z-index. */}
       <aside
+        ref={trayRef}
         id="calendar-tray"
         aria-hidden={!sidebarVisible}
         className={`calendar-tray mantle-frosted p-6 flex flex-col ${!sidebarVisible ? 'tray-collapsed' : ''}`}
@@ -1498,6 +1551,7 @@ const Dashboard: React.FC = () => {
                   zoomLevel={zoomLevel}
                   timelineRef={timelineRef}
                   onReminderSelect={() => setSidebarVisible(true)}
+                  showReminders={showTimelineReminders}
                 />
                 </div>
               </>

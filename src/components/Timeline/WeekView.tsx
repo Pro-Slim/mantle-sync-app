@@ -197,6 +197,7 @@ const WeekView: React.FC<WeekViewProps> = ({
                   return (
                     <button
                       key={occurrence.reminder.id}
+                      data-opens-tray
                       onClick={onReminderSelect}
                       title={`${occurrence.label} — ${formatDate(occurrence.date)}${isToday ? ' (today)' : ''}`}
                       className={`rounded-md py-1 text-[10px] font-bold truncate border transition-all hover:brightness-125 ${

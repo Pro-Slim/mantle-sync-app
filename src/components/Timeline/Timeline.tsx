@@ -27,6 +27,7 @@ interface TimelineProps {
   zoomLevel?: number;
   timelineRef?: React.RefObject<HTMLDivElement>;
   onReminderSelect?: () => void;
+  showReminders?: boolean;
 }
 
 const Timeline: React.FC<TimelineProps> = ({
@@ -40,6 +41,7 @@ const Timeline: React.FC<TimelineProps> = ({
   zoomLevel = 1,
   timelineRef: externalTimelineRef,
   onReminderSelect,
+  showReminders = true,
 }) => {
   const [hoveredEventId, setHoveredEventId] = useState<string | null>(null);
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
@@ -251,13 +253,14 @@ const Timeline: React.FC<TimelineProps> = ({
 
           {/* Reminder lane: dots for the Friday report, diamonds for the
               monthly stats; past dates dimmed. */}
-          <g>
+          {showReminders && <g>
             {reminderMarks.map((mark) => {
               const isMonthly = mark.reminder.id === 'monthly-stats';
               const size = isMonthly ? 5 : 2.5;
               return (
                 <g
                   key={`${mark.reminder.id}-${mark.date.getTime()}`}
+                  data-opens-tray
                   onClick={onReminderSelect}
                   onMouseDown={(e) => e.stopPropagation()}
                   style={{ cursor: onReminderSelect ? 'pointer' : 'default' }}
@@ -285,7 +288,7 @@ const Timeline: React.FC<TimelineProps> = ({
                 </g>
               );
             })}
-          </g>
+          </g>}
 
           {/* Event nodes */}
           {events.map((event) => (

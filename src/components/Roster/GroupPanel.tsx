@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import {
   MemberRole,
   PLATFORM_LABEL,
+  PLATFORM_LINK_HINT,
   Platform,
   RosterGroup,
   RosterMember,
@@ -365,23 +366,26 @@ const GroupPanel: React.FC<GroupPanelProps> = ({ group, members, readOnly, onClo
               className={inputClass}
               value={groupDraft.name}
               onChange={(e) => setGroupDraft({ ...groupDraft, name: e.target.value })}
-              placeholder="Group name, e.g. Mantle Korea"
+              placeholder="Name, e.g. Mantle Korea or @Mantle_Official"
               autoFocus
             />
             <div className="flex gap-1.5">
               <select
-                className={`${inputBase} w-28 flex-shrink-0`}
+                className={`${inputBase} w-32 flex-shrink-0`}
                 value={groupDraft.platform}
                 onChange={(e) => setGroupDraft({ ...groupDraft, platform: e.target.value as Platform })}
               >
-                <option value="telegram">Telegram</option>
-                <option value="discord">Discord</option>
+                {(Object.keys(PLATFORM_LABEL) as Platform[]).map((p) => (
+                  <option key={p} value={p}>
+                    {PLATFORM_LABEL[p]}
+                  </option>
+                ))}
               </select>
               <input
                 className={inputClass}
                 value={groupDraft.url ?? ''}
                 onChange={(e) => setGroupDraft({ ...groupDraft, url: e.target.value })}
-                placeholder="Link, e.g. https://t.me/..."
+                placeholder={`Link, e.g. ${PLATFORM_LINK_HINT[groupDraft.platform]}`}
               />
             </div>
             <textarea

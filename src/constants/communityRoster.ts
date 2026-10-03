@@ -1,6 +1,8 @@
 import { STEWARDS, StewardId } from './stewards';
 
-export type Platform = 'telegram' | 'discord';
+// An X Community is a group with its own moderators; an X Account is a profile
+// (e.g. a regional Mantle handle) whose managers are tracked the same way.
+export type Platform = 'telegram' | 'discord' | 'x_community' | 'x_account';
 export type MemberRole = 'owner' | 'admin' | 'bot';
 export type MemberStatus = 'active' | 'requested';
 
@@ -54,6 +56,15 @@ export const TRACKED_ADMINS: TrackedAdmin[] = [
 export const PLATFORM_LABEL: Record<Platform, string> = {
   telegram: 'Telegram',
   discord: 'Discord',
+  x_community: 'X Community',
+  x_account: 'X Account',
+};
+
+export const PLATFORM_LINK_HINT: Record<Platform, string> = {
+  telegram: 'https://t.me/...',
+  discord: 'https://discord.gg/...',
+  x_community: 'https://x.com/i/communities/...',
+  x_account: 'https://x.com/...',
 };
 
 // Must match the generated handle_key column in supabase-community-roster.sql,

@@ -12,7 +12,7 @@
 CREATE TABLE IF NOT EXISTS public.community_groups (
   id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
   name TEXT NOT NULL CHECK (btrim(name) <> ''),
-  platform TEXT NOT NULL DEFAULT 'telegram' CHECK (platform IN ('telegram', 'discord')),
+  platform TEXT NOT NULL DEFAULT 'telegram',
   url TEXT,
   notes TEXT,
   sort_order INT NOT NULL DEFAULT 0,
@@ -20,6 +20,12 @@ CREATE TABLE IF NOT EXISTS public.community_groups (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_by UUID REFERENCES auth.users(id) DEFAULT auth.uid()
 );
+
+-- Kept outside CREATE TABLE so re-running the script widens the list on a
+-- database created before X was added (2026-10).
+ALTER TABLE public.community_groups DROP CONSTRAINT IF EXISTS community_groups_platform_check;
+ALTER TABLE public.community_groups ADD CONSTRAINT community_groups_platform_check
+  CHECK (platform IN ('telegram', 'discord', 'x_community', 'x_account'));
 
 CREATE TABLE IF NOT EXISTS public.community_group_members (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
