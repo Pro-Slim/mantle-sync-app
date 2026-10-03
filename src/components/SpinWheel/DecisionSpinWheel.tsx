@@ -15,6 +15,11 @@
  * `participants` defaults to SLIMONSHARK, LUISMA, HADUKEM and SPIN AGAIN, each
  * with exactly the same chance; `centerLabel` (MINH) sits in the hub. Pass
  * `variant="card"` to show it as a card over the page rather than a full stage.
+ * A participant written "Caption / NAME" shows NAME as the label with the
+ * caption in small type above it, and lands as NAME.
+ *
+ * Colours follow the Mantle brand guideline: teal #65B3AE, pale teal #008F6A,
+ * white and black, on the black -> dark blue -> desaturated green gradient.
  */
 import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
 import styles from './DecisionSpinWheel.module.css';
@@ -38,7 +43,7 @@ export interface DecisionSpinWheelProps {
 
 type HistoryEntry = SpinResultPayload;
 
-const DEFAULT_PARTICIPANTS = ['SLIMONSHARK', 'LUISMA', 'HADUKEM', 'SPIN AGAIN'];
+const DEFAULT_PARTICIPANTS = ['SLIMONSHARK', 'LUISMA', 'HADUKEM', 'Junior Hadukem is too young / SPIN AGAIN'];
 const HISTORY_KEY = 'mantle-sync-spin-history';
 const HISTORY_LIMIT = 5;
 
@@ -52,10 +57,39 @@ const LABEL_INNER = HUB_R + 16;
 const LABEL_OUTER = SLICE_R - 14;
 const BULBS = 16;
 
-const isSpinAgain = (label: string): boolean => /spin again/i.test(label);
+interface ParsedLabel {
+  main: string;
+  caption: string | null;
+}
+
+const parseLabel = (participant: string): ParsedLabel => {
+  const parts = participant.split(/\s+\/\s+/);
+  return { main: parts[parts.length - 1], caption: parts.length > 1 ? parts.slice(0, -1).join(' ') : null };
+};
+
+// Breaks a caption into lines of at most `max` characters, preferring the
+// split that keeps the lines most even ("Junior Hadukem" / "is too young"
+// rather than "Junior Hadukem is" / "too young").
+const wrapCaption = (text: string, max: number): string[] => {
+  const words = text.split(/\s+/);
+  if (text.length <= max || words.length < 2) return [text];
+  let best: string[] = [text];
+  let bestWidth = Infinity;
+  for (let i = 1; i < words.length; i++) {
+    const lines = [words.slice(0, i).join(' '), words.slice(i).join(' ')];
+    const width = Math.max(...lines.map((l) => l.length));
+    if (width < bestWidth) {
+      best = lines;
+      bestWidth = width;
+    }
+  }
+  return best;
+};
+
+const isSpinAgain = (label: string): boolean => /spin again/i.test(parseLabel(label).main);
 // A slice named like "MINH - SPIN AGAIN" lands as plain "SPIN AGAIN": the
 // result says what to do next.
-const resultText = (label: string): string => (isSpinAgain(label) ? 'SPIN AGAIN' : label);
+const resultText = (label: string): string => (isSpinAgain(label) ? 'SPIN AGAIN' : parseLabel(label).main);
 
 const mod = (n: number, m: number): number => ((n % m) + m) % m;
 
@@ -142,13 +176,16 @@ const DecisionSpinWheel: React.FC<DecisionSpinWheelProps> = ({
   // A name on screen is a decision made; replacing it takes a second yes.
   const nameIsShowing = winnerLabel !== null && !isSpinAgain(winnerLabel);
 
-  // One size for every label, set by the longest line so none overflows its
-  // slice; "MINH - SPIN AGAIN" breaks at the dash onto two lines.
-  const labels = useMemo(() => participants.map((p) => p.split(/\s+-\s+/)), [participants]);
+  // One size for every name, set by the longest so none overflows its slice.
+  // Captions run smaller above their name, wrapped to fit the same length.
+  const parsed = useMemo(() => participants.map(parseLabel), [participants]);
   const fontSize = useMemo(() => {
-    const longest = Math.max(...labels.flat().map((line) => line.length));
+    const longest = Math.max(...parsed.map((l) => l.main.length));
     return Math.max(11, Math.min(24, (LABEL_OUTER - LABEL_INNER) / (longest * 0.68)));
-  }, [labels]);
+  }, [parsed]);
+  const captionSize = Math.max(9, fontSize * 0.8);
+  // Captions are mixed case, so narrower per letter than the all-caps names.
+  const captionChars = Math.floor((LABEL_OUTER - LABEL_INNER) / (captionSize * 0.58));
 
   // Sized to sit inside the hub (72 units across) with a margin either side.
   const hubFontSize = Math.max(9, Math.min(18, 56 / (Math.max(1, centerLabel.length) * 0.72)));
@@ -248,13 +285,14 @@ const DecisionSpinWheel: React.FC<DecisionSpinWheelProps> = ({
             }`}
           >
             <defs>
-              <radialGradient id="dsw-light" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stopColor="#7fd8ff" />
-                <stop offset="100%" stopColor="#2a9be6" />
+              {/* Radiating from the hub, not from each slice's own box. */}
+              <radialGradient id="dsw-light" gradientUnits="userSpaceOnUse" cx={C} cy={C} r={SLICE_R}>
+                <stop offset="0%" stopColor="#9ADBD6" />
+                <stop offset="100%" stopColor="#65B3AE" />
               </radialGradient>
-              <radialGradient id="dsw-deep" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stopColor="#2f6fd6" />
-                <stop offset="100%" stopColor="#123c9c" />
+              <radialGradient id="dsw-deep" gradientUnits="userSpaceOnUse" cx={C} cy={C} r={SLICE_R}>
+                <stop offset="0%" stopColor="#0E2520" />
+                <stop offset="100%" stopColor="#008F6A" />
               </radialGradient>
             </defs>
 
@@ -289,7 +327,7 @@ const DecisionSpinWheel: React.FC<DecisionSpinWheelProps> = ({
               );
             })}
 
-            {labels.map((lines, i) => {
+            {parsed.map((label, i) => {
               const mid = (i + 0.5) * sliceDeg;
               const rc = (LABEL_INNER + LABEL_OUTER) / 2;
               // Text runs along the radius. Whether it is turned over is decided
@@ -300,8 +338,20 @@ const DecisionSpinWheel: React.FC<DecisionSpinWheelProps> = ({
               const onScreen = mod(mid + rotation, 360);
               const flip = onScreen > 180 && onScreen < 360;
               const transform = `rotate(${mid - 90} ${C} ${C})${flip ? ` rotate(180 ${C + rc} ${C})` : ''}`;
-              const again = isSpinAgain(participants[i]);
               const dim = winner !== null && winner !== i;
+              // Dark ink on the light teal slices, white on the pale-teal ones.
+              const onLight = i % 2 === 0;
+              const lines = [
+                ...(label.caption ? wrapCaption(label.caption, captionChars) : []).map((text) => ({
+                  text,
+                  size: captionSize,
+                  caption: true,
+                })),
+                { text: label.main, size: fontSize, caption: false },
+              ];
+              const heights = lines.map((l) => l.size * 1.18);
+              const total = heights.reduce((a, b) => a + b, 0);
+              let cursor = C - total / 2;
               return (
                 <text
                   key={`label-${i}`}
@@ -310,23 +360,28 @@ const DecisionSpinWheel: React.FC<DecisionSpinWheelProps> = ({
                   transform={transform}
                   textAnchor="middle"
                   dominantBaseline="central"
-                  fontSize={fontSize}
-                  className={`${styles.label} ${again ? styles.labelAgain : ''} ${dim ? styles.labelDim : ''}`}
+                  className={`${styles.label} ${onLight ? styles.labelOnLight : ''} ${dim ? styles.labelDim : ''}`}
                 >
-                  {lines.map((line, li) => (
-                    <tspan
-                      key={li}
-                      x={C + rc}
-                      dy={li === 0 ? `${-(lines.length - 1) * 0.58}em` : '1.16em'}
-                    >
-                      {line}
-                    </tspan>
-                  ))}
+                  {lines.map((line, li) => {
+                    const y = cursor + heights[li] / 2;
+                    cursor += heights[li];
+                    return (
+                      <tspan
+                        key={li}
+                        x={C + rc}
+                        y={y}
+                        fontSize={line.size}
+                        className={line.caption ? styles.caption : undefined}
+                      >
+                        {line.text}
+                      </tspan>
+                    );
+                  })}
                 </text>
               );
             })}
 
-            <circle cx={C} cy={C} r={HUB_R + 4} fill="#0a2a78" />
+            <circle cx={C} cy={C} r={HUB_R + 4} fill="#050D20" />
           </svg>
         </div>
 
@@ -343,15 +398,15 @@ const DecisionSpinWheel: React.FC<DecisionSpinWheelProps> = ({
                 </feMerge>
               </filter>
               <radialGradient id="dsw-hub" cx="38%" cy="34%" r="70%">
-                <stop offset="0%" stopColor="#8fd0ff" />
-                <stop offset="45%" stopColor="#2f78e0" />
-                <stop offset="100%" stopColor="#123a99" />
+                <stop offset="0%" stopColor="#1B4A42" />
+                <stop offset="55%" stopColor="#0B1D1F" />
+                <stop offset="100%" stopColor="#000000" />
               </radialGradient>
             </defs>
 
-            <circle cx={C} cy={C} r={RING_R + 6} fill="none" stroke="#7fe8ff" strokeOpacity={0.25} strokeWidth={10} filter="url(#dsw-bloom)" />
-            <circle cx={C} cy={C} r={RING_R} fill="none" stroke="#bff3ff" strokeWidth={3} filter="url(#dsw-bloom)" />
-            <circle cx={C} cy={C} r={SLICE_R + 1} fill="none" stroke="#0a2a78" strokeWidth={3} />
+            <circle cx={C} cy={C} r={RING_R + 6} fill="none" stroke="#65B3AE" strokeOpacity={0.3} strokeWidth={10} filter="url(#dsw-bloom)" />
+            <circle cx={C} cy={C} r={RING_R} fill="none" stroke="#7FD4D0" strokeWidth={3} filter="url(#dsw-bloom)" />
+            <circle cx={C} cy={C} r={SLICE_R + 1} fill="none" stroke="#050D20" strokeWidth={3} />
 
             {Array.from({ length: BULBS }, (_, i) => {
               const [x, y] = point((i * 360) / BULBS, RING_R);
@@ -367,9 +422,9 @@ const DecisionSpinWheel: React.FC<DecisionSpinWheelProps> = ({
               );
             })}
 
-            <circle cx={C} cy={C} r={HUB_R} fill="url(#dsw-hub)" stroke="#bff3ff" strokeOpacity={0.6} strokeWidth={2} />
+            <circle cx={C} cy={C} r={HUB_R} fill="url(#dsw-hub)" stroke="#65B3AE" strokeOpacity={0.9} strokeWidth={2} />
             {/* The highlight sits high on the hub so it never runs under the name. */}
-            <ellipse cx={C - 10} cy={C - 22} rx={12} ry={5.5} fill="#fff" fillOpacity={0.3} />
+            <ellipse cx={C - 10} cy={C - 22} rx={12} ry={5.5} fill="#fff" fillOpacity={0.14} />
             {centerLabel && (
               <text
                 x={C}
@@ -386,7 +441,7 @@ const DecisionSpinWheel: React.FC<DecisionSpinWheelProps> = ({
             <polygon
               points={`${C - 15},${C - RING_R - 14} ${C + 15},${C - RING_R - 14} ${C},${C - SLICE_R + 22}`}
               fill="#fff"
-              stroke="#0a2a78"
+              stroke="#050D20"
               strokeWidth={2}
               strokeLinejoin="round"
               filter="url(#dsw-bloom)"
@@ -409,6 +464,9 @@ const DecisionSpinWheel: React.FC<DecisionSpinWheelProps> = ({
         {winnerLabel !== null ? (
           <>
             <div className={styles.resultLine}>Result: {resultText(winnerLabel)}</div>
+            {parseLabel(winnerLabel).caption && (
+              <div className={styles.resultCaption}>{parseLabel(winnerLabel).caption}</div>
+            )}
             <div className={styles.resultFor}>For: {lastDecision}</div>
           </>
         ) : spinning ? (

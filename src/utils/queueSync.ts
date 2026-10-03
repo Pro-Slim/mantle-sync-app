@@ -4,6 +4,7 @@ import { useSyncStatusStore } from '../stores/syncStatusStore';
 import { useEventStore } from '../stores/eventStore';
 import { useReminderStore } from '../stores/reminderStore';
 import { useRecurringReminderStore } from '../stores/recurringReminderStore';
+import { useCountdownStore } from '../stores/countdownStore';
 import { useLogStore } from '../stores/logStore';
 
 const MAX_RETRIES = 3;
@@ -17,6 +18,7 @@ export const syncAll = async (userId: string): Promise<void> => {
     useEventStore.getState().fetchEvents(),
     useReminderStore.getState().fetchReminders(userId),
     useRecurringReminderStore.getState().fetchReminders(),
+    useCountdownStore.getState().fetchCountdowns(),
     useLogStore.getState().fetchLogs(userId),
   ]);
 };

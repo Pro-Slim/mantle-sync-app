@@ -28,6 +28,7 @@ import { supabase } from '../utils/supabaseClient';
 import { useEventStore } from '../stores/eventStore';
 import { useReminderStore } from '../stores/reminderStore';
 import { useRecurringReminderStore } from '../stores/recurringReminderStore';
+import { useCountdownStore } from '../stores/countdownStore';
 import { useLogStore } from '../stores/logStore';
 import { useNetworkStatus } from '../hooks/useNetworkStatus';
 import { useSyncStatusStore } from '../stores/syncStatusStore';
@@ -37,10 +38,6 @@ import { handleButtonHoverSound, playWhooshSound, playGearTurnSound, isSoundMute
 import { fileToBase64 } from '../utils/fileToBase64';
 
 
-interface CountdownClockState {
-  eventId: string;
-  type: 'endDate' | 'rewardDelivery';
-}
 
 // One form shape, shared by the Add modal and the details panel's
 // Edit / Review mode. Two copies of this mapping is how a field ends up
@@ -232,14 +229,14 @@ const Dashboard: React.FC = () => {
       // Preference just won't survive a reload.
     }
   };
-  // Where the ribbon brings the spin wheel: off (the default) is the original
-  // full-screen stage with the light show; on swings it into the middle of the
-  // page over a blurred dashboard. Per browser, like the toggle above.
+  // Where the ribbon brings the spin wheel: on (the default since 2026-10-03)
+  // swings it into the middle of the page over a blurred dashboard; off is the
+  // original full-screen stage with the light show. Per browser.
   const [wheelOnPage, setWheelOnPage] = React.useState(() => {
     try {
-      return localStorage.getItem('mantle-sync-wheel-on-page') === 'on';
+      return localStorage.getItem('mantle-sync-wheel-on-page') !== 'off';
     } catch {
-      return false;
+      return true;
     }
   });
   const toggleWheelOnPage = () => {
@@ -253,7 +250,24 @@ const Dashboard: React.FC = () => {
   };
   const [soundMuted, setSoundMutedState] = React.useState(() => isSoundMuted());
   const [sidebarVisible, setSidebarVisible] = React.useState(false);
-  const [countdownClocks, setCountdownClocks] = React.useState<CountdownClockState[]>([]);
+  const { countdowns: countdownClocks, error: countdownError } = useCountdownStore();
+  // Per browser: the strip can be put away when it is in the way. Off only
+  // hides it on this screen; the shared clocks carry on for everyone else.
+  const [showCountdowns, setShowCountdowns] = React.useState(() => {
+    try {
+      return localStorage.getItem('mantle-sync-countdowns') !== 'off';
+    } catch {
+      return true;
+    }
+  });
+  const setCountdownsVisible = (next: boolean) => {
+    setShowCountdowns(next);
+    try {
+      localStorage.setItem('mantle-sync-countdowns', next ? 'on' : 'off');
+    } catch {
+      // Preference just won't survive a reload.
+    }
+  };
   const viewport = useViewport();
   const { isMobile } = viewport;
   // The pane used to be a flat 600px, which on a phone left the countdown dock
@@ -440,8 +454,20 @@ const Dashboard: React.FC = () => {
       fetchEvents();
       fetchLogs(user.id);
       void useRecurringReminderStore.getState().fetchReminders();
+      void useCountdownStore.getState().fetchCountdowns();
     }
   }, [user?.id, fetchEvents, fetchLogs]);
+
+  // Re-read the shared clocks when the tab comes back into view, so one a
+  // colleague started while this window sat in the background shows up.
+  useEffect(() => {
+    if (!user?.id) return;
+    const refresh = () => {
+      if (document.visibilityState === 'visible') void useCountdownStore.getState().fetchCountdowns();
+    };
+    document.addEventListener('visibilitychange', refresh);
+    return () => document.removeEventListener('visibilitychange', refresh);
+  }, [user?.id]);
 
   // Sync the auth modal to session state. The "session present" branch is
   // needed because showAuthModal's initial value is computed from `session`
@@ -612,11 +638,7 @@ const Dashboard: React.FC = () => {
 
     const handleChangeCountdownType = async (eventId: string, newType: 'endDate' | 'rewardDelivery') => {
     if (!user?.id) return;
-    setCountdownClocks(
-      countdownClocks.map(c =>
-        c.eventId === eventId ? { ...c, type: newType } : c
-      )
-    );
+    if (!(await useCountdownStore.getState().changeType(eventId, newType))) return;
     const event = events.find(e => e.id === eventId);
     if (event) {
       await addLog('change_countdown', `Changed countdown for ${event.title}`);
@@ -642,7 +664,7 @@ const Dashboard: React.FC = () => {
   };
 
 
-  const handleAddCountdown = (eventId: string) => {
+  const handleAddCountdown = async (eventId: string) => {
     if (countdownClocks.find(c => c.eventId === eventId)) return;
 
     const event = events.find(e => e.id === eventId);
@@ -654,11 +676,19 @@ const Dashboard: React.FC = () => {
       return;
     }
 
-    setCountdownClocks([...countdownClocks, { eventId, type }]);
+    // Starting a clock while the strip is put away brings the strip back, or
+    // the click would seem to do nothing.
+    if (!showCountdowns) setCountdownsVisible(true);
+    if (await useCountdownStore.getState().addCountdown(eventId, type)) {
+      await addLog('add_countdown', `Started a countdown for ${event.title}`);
+    }
   };
 
-  const handleRemoveCountdown = (eventId: string) => {
-    setCountdownClocks(countdownClocks.filter(c => c.eventId !== eventId));
+  const handleRemoveCountdown = async (eventId: string) => {
+    const event = events.find(e => e.id === eventId);
+    if (await useCountdownStore.getState().removeCountdown(eventId)) {
+      await addLog('remove_countdown', `Removed the countdown for ${event?.title ?? eventId}`);
+    }
   };
 
   // Pointer events rather than mouse events, so the handle can also be dragged
@@ -1083,6 +1113,23 @@ const Dashboard: React.FC = () => {
                       Hover {hoverEnabled ? 'ON' : 'OFF'}
                     </button>
 
+                    {/* Countdown strip toggle */}
+                    <button
+                      onClick={() => setCountdownsVisible(!showCountdowns)}
+                      className={`w-full px-4 py-2 rounded-lg text-left font-semibold text-sm transition-all flex items-center gap-3 ${
+                        showCountdowns
+                          ? 'text-[#7FD4D0] hover:bg-[#65B3AE] hover:bg-opacity-20'
+                          : 'text-[rgba(255,255,255,0.5)] hover:bg-[rgba(255,255,255,0.1)]'
+                      }`}
+                      title="Show or hide the countdown clocks along the bottom. Hiding them only affects your screen; the clocks stay for everyone else."
+                    >
+                      <svg viewBox="0 0 24 24" className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" style={{ color: showCountdowns ? '#65B3AE' : 'rgba(255,255,255,0.5)' }}>
+                        <circle cx="12" cy="13" r="8" />
+                        <path d="M12 9v4l2.5 2.5M9 2h6" />
+                      </svg>
+                      Countdown clocks {showCountdowns ? 'ON' : 'OFF'}
+                    </button>
+
                     {/* Spin wheel mode toggle */}
                     <button
                       onClick={toggleWheelOnPage}
@@ -1333,7 +1380,7 @@ const Dashboard: React.FC = () => {
               {([
                 { mode: 'week' as const, label: 'Week', hint: 'Weekly layout: active campaigns per day' },
                 { mode: 'timeline' as const, label: 'Timeline', hint: 'Horizontal timeline across the year' },
-                { mode: 'duty' as const, label: 'Steward Schedule', hint: 'Who is on duty each hour, with a live cursor on the current UTC hour and monthly hours per steward' },
+                { mode: 'duty' as const, label: 'Schedule', hint: 'Who is on duty each hour, with a live cursor on the current UTC hour and monthly hours per steward' },
                 { mode: 'admins' as const, label: 'Groups TG, DC & X', hint: 'Who is owner, admin or bot in each Mantle Telegram group, Discord server, X community and X account, and where our stewards are missing' },
               ]).map(({ mode, label, hint }) => (
                 <button
@@ -1941,7 +1988,9 @@ const Dashboard: React.FC = () => {
         </div>
       )}
 
-      {/* Event Countdown Clocks at Bottom */}
+      {/* Event Countdown Clocks at Bottom: shared by every steward, and put
+          away entirely when this viewer has switched the strip off. */}
+      {showCountdowns && (
       <div
         data-countdown-section
         className={`mantle-frosted border-t border-[rgba(101,179,174,0.2)] overflow-x-auto relative z-10 safe-bottom ${
@@ -1953,6 +2002,9 @@ const Dashboard: React.FC = () => {
             isMobile ? 'flex-nowrap min-h-0' : 'flex-wrap min-h-[120px]'
           }`}
         >
+          {countdownError && (
+            <p className="w-full text-center text-[11px] text-red-300">{countdownError}</p>
+          )}
           {countdownClocks.length === 0 ? (
             /* Empty, this dock is only a hint -- on a phone it shrinks to one
                line so it cannot take half the screen, as it did before. */
@@ -1966,7 +2018,7 @@ const Dashboard: React.FC = () => {
                   No countdown clocks active
                 </p>
                 <p className="text-xs text-[rgba(101,179,174,0.4)] mt-1">
-                  Click on an event to add one
+                  Click on an event to start one; every steward will see it. Hide this strip from Settings.
                 </p>
               </div>
             )
@@ -1990,6 +2042,7 @@ const Dashboard: React.FC = () => {
           )}
         </div>
       </div>
+      )}
 
       {/* Add Event Modal */}
       {showAddModal && (
