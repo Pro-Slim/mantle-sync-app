@@ -17,6 +17,7 @@ import LoginAnimation from '../components/LoginAnimation';
 import StewardDutyCalendar from '../components/Duty/StewardDutyCalendar';
 import OnDutyPill from '../components/Duty/OnDutyPill';
 import CommunityRoster from '../components/Roster/CommunityRoster';
+import MStocksArena from '../components/MStocks/MStocksArena';
 import { usePresence } from '../hooks/usePresence';
 import { useViewport } from '../hooks/useViewport';
 import { isAdmin } from '../constants/admins';
@@ -289,7 +290,7 @@ const Dashboard: React.FC = () => {
   const [settingsSpinning, setSettingsSpinning] = React.useState(false);
   const [logoMusicOpen, setLogoMusicOpen] = React.useState(false);
   const [logoMusicMinimized, setLogoMusicMinimized] = React.useState(false);
-  const [mainView, setMainView] = React.useState<'week' | 'timeline' | 'duty' | 'admins'>('week');
+  const [mainView, setMainView] = React.useState<'week' | 'timeline' | 'duty' | 'admins' | 'mstocks'>('week');
   const [weekAnchor, setWeekAnchor] = React.useState(new Date());
   const [selectedCampaignDay, setSelectedCampaignDay] = React.useState<Date | null>(null);
   const [logsModalOpen, setLogsModalOpen] = React.useState(false);
@@ -1382,6 +1383,7 @@ const Dashboard: React.FC = () => {
                 { mode: 'timeline' as const, label: 'Timeline', hint: 'Horizontal timeline across the year' },
                 { mode: 'duty' as const, label: 'Schedule', hint: 'Who is on duty each hour, with a live cursor on the current UTC hour and monthly hours per steward' },
                 { mode: 'admins' as const, label: 'Groups TG, DC & X', hint: 'Who is owner, admin or bot in each Mantle Telegram group, Discord server, X community and X account, and where our stewards are missing' },
+                { mode: 'mstocks' as const, label: 'mStocks', hint: "mStocks Arena, Hadukem's mini-app: today's players, check-ins, quizzes and Higher or Lower, plus links to its admin panel" },
               ]).map(({ mode, label, hint }) => (
                 <button
                   key={mode}
@@ -1665,6 +1667,8 @@ const Dashboard: React.FC = () => {
               <StewardDutyCalendar />
             ) : mainView === 'admins' ? (
               <CommunityRoster />
+            ) : mainView === 'mstocks' ? (
+              <MStocksArena />
             ) : mainView === 'week' ? (
               <WeekView
                 events={events}
